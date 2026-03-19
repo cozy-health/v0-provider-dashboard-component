@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import {
   Users,
-  BarChart3,
+  FileText,
   Settings,
   Plus,
   UserPlus,
@@ -23,6 +24,12 @@ import {
   AlertTriangle,
   Zap,
   Brain,
+  Download,
+  Calendar,
+  BarChart2,
+  Shield,
+  FileCheck,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -46,6 +53,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import {
   LineChart,
@@ -58,9 +66,13 @@ import {
   BarChart,
   Bar,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts"
 
 type RiskLevel = "high" | "moderate" | "stable"
+type AppView = "onboarding" | "dashboard"
 
 interface MoodEntry {
   date: string
@@ -106,6 +118,14 @@ interface Patient {
   triggers: Trigger[]
   copingMechanisms: CopingMechanism[]
   assignedResources: AssignedResource[]
+}
+
+interface OnboardingForm {
+  email: string
+  firstName: string
+  lastName: string
+  practiceName: string
+  patientCode: string[]
 }
 
 const resourceLibrary: Resource[] = [
@@ -331,8 +351,21 @@ const mockPatients: Patient[] = [
 
 const navItems = [
   { icon: Users, label: "Patients" },
-  { icon: BarChart3, label: "Analytics" },
+  { icon: FileText, label: "Reports" },
   { icon: Settings, label: "Settings" },
+]
+
+// Report data
+const monthlyMoodData = [
+  { month: "Jan", avgMood: 62, sessions: 145 },
+  { month: "Feb", avgMood: 65, sessions: 168 },
+  { month: "Mar", avgMood: 68, sessions: 189 },
+]
+
+const riskDistribution = [
+  { name: "High Risk", value: 2, color: "#f25c05" },
+  { name: "Moderate", value: 2, color: "#f2cb05" },
+  { name: "Stable", value: 3, color: "#00bc4c" },
 ]
 
 function getRiskBadgeStyles(risk: RiskLevel) {
@@ -403,34 +436,8 @@ function getStatusIcon(status: AssignedResource["status"]) {
   }
 }
 
-// Cozy Logo Component
-function CozyLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <rect width="40" height="40" rx="10" fill="#0460d8" />
-      <path
-        d="M20 10C14.477 10 10 14.477 10 20C10 25.523 14.477 30 20 30C22.5 30 24.77 29.043 26.5 27.5"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <circle cx="26" cy="16" r="3" fill="#00bc4c" />
-      <path
-        d="M15 20C15 20 16.5 23 20 23C23.5 23 25 20 25 20"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
 export default function ProviderDashboard() {
+  const [appView, setAppView] = useState<AppView>("onboarding")
   const [activeNav, setActiveNav] = useState("Patients")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [codeInputs, setCodeInputs] = useState(["", "", "", "", "", ""])
@@ -439,6 +446,18 @@ export default function ProviderDashboard() {
   const [resourceSearch, setResourceSearch] = useState("")
   const [assignNotes, setAssignNotes] = useState("")
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
+  
+  // Onboarding state
+  const [onboardingForm, setOnboardingForm] = useState<OnboardingForm>({
+    email: "",
+    firstName: "",
+    lastName: "",
+    practiceName: "",
+    patientCode: ["", "", "", "", "", ""],
+  })
+  const [showConsentModal, setShowConsentModal] = useState(false)
+  const [consentAgreed, setConsentAgreed] = useState(false)
+  const [dataRevocationAgreed, setDataRevocationAgreed] = useState(false)
 
   const handleCodeChange = (index: number, value: string) => {
     if (value.length <= 1 && /^[0-9]*$/.test(value)) {
@@ -450,6 +469,26 @@ export default function ProviderDashboard() {
         const nextInput = document.getElementById(`code-${index + 1}`)
         nextInput?.focus()
       }
+    }
+  }
+
+  const handleOnboardingCodeChange = (index: number, value: string) => {
+    if (value.length <= 1 && /^[0-9]*$/.test(value)) {
+      const newCode = [...onboardingForm.patientCode]
+      newCode[index] = value
+      setOnboardingForm({ ...onboardingForm, patientCode: newCode })
+
+      if (value && index < 5) {
+        const nextInput = document.getElementById(`onboard-code-${index + 1}`)
+        nextInput?.focus()
+      }
+    }
+  }
+
+  const handleOnboardingCodeKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !onboardingForm.patientCode[index] && index > 0) {
+      const prevInput = document.getElementById(`onboard-code-${index - 1}`)
+      prevInput?.focus()
     }
   }
 
@@ -480,7 +519,6 @@ export default function ProviderDashboard() {
 
   const handleAssignResource = () => {
     if (selectedResource && selectedPatient) {
-      // In a real app, this would update the database
       setIsAssignModalOpen(false)
       setSelectedResource(null)
       setAssignNotes("")
@@ -493,6 +531,226 @@ export default function ProviderDashboard() {
     const first = moodData[0].mood
     const last = moodData[moodData.length - 1].mood
     return last - first
+  }
+
+  const handleOnboardingSubmit = () => {
+    const code = onboardingForm.patientCode.join("")
+    if (
+      onboardingForm.email &&
+      onboardingForm.firstName &&
+      onboardingForm.lastName &&
+      onboardingForm.practiceName &&
+      code.length === 6
+    ) {
+      setShowConsentModal(true)
+    }
+  }
+
+  const handleConsentAgree = () => {
+    if (consentAgreed && dataRevocationAgreed) {
+      setShowConsentModal(false)
+      setAppView("dashboard")
+    }
+  }
+
+  const handleGenerateReport = () => {
+    // In a real app, this would generate and download a PDF
+    alert("Generating monthly compliance report...")
+  }
+
+  // Onboarding Screen
+  if (appView === "onboarding") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Logo and Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <Image
+                src="/images/cozy-logo.png"
+                alt="Cozy"
+                width={80}
+                height={80}
+                className="rounded-2xl"
+              />
+            </div>
+            <h1 className="text-2xl font-semibold text-foreground">Welcome to Cozy</h1>
+            <p className="text-muted-foreground mt-2">Provider Dashboard - Connect Your First Patient</p>
+          </div>
+
+          {/* Signup Form */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">Email Address</label>
+                <Input
+                  type="email"
+                  placeholder="provider@clinic.com"
+                  value={onboardingForm.email}
+                  onChange={(e) => setOnboardingForm({ ...onboardingForm, email: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-2">First Name</label>
+                  <Input
+                    placeholder="Rebecca"
+                    value={onboardingForm.firstName}
+                    onChange={(e) => setOnboardingForm({ ...onboardingForm, firstName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-2">Last Name</label>
+                  <Input
+                    placeholder="Moore"
+                    value={onboardingForm.lastName}
+                    onChange={(e) => setOnboardingForm({ ...onboardingForm, lastName: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">Practice / Hospital Name</label>
+                <Input
+                  placeholder="Mindful Health Clinic"
+                  value={onboardingForm.practiceName}
+                  onChange={(e) => setOnboardingForm({ ...onboardingForm, practiceName: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">Patient Connection Code</label>
+                <p className="text-xs text-muted-foreground mb-3">Enter the 6-digit code from your patient's Cozy app</p>
+                <div className="flex justify-center gap-2">
+                  {onboardingForm.patientCode.map((digit, index) => (
+                    <Input
+                      key={index}
+                      id={`onboard-code-${index}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOnboardingCodeChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOnboardingCodeKeyDown(index, e)}
+                      className="w-11 h-12 text-center text-xl font-semibold"
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleOnboardingSubmit}
+              className="w-full bg-[#0460d8] hover:bg-[#0460d8]/90 text-white h-11"
+              disabled={
+                !onboardingForm.email ||
+                !onboardingForm.firstName ||
+                !onboardingForm.lastName ||
+                !onboardingForm.practiceName ||
+                onboardingForm.patientCode.join("").length !== 6
+              }
+            >
+              Connect Patient
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            By continuing, you agree to our Terms of Service and Privacy Policy
+          </p>
+        </div>
+
+        {/* Consent Modal */}
+        <Dialog open={showConsentModal} onOpenChange={setShowConsentModal}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#0460d8]/10 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-[#0460d8]" />
+                </div>
+                <DialogTitle className="text-xl">Data Sharing Consent</DialogTitle>
+              </div>
+              <DialogDescription>
+                Please review and agree to the following data sharing terms before connecting with your patient.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3 text-sm">
+                <h4 className="font-semibold text-foreground">What data will be shared:</h4>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#00bc4c] mt-0.5 shrink-0" />
+                    <span>Daily mood scores and emotional check-ins</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#00bc4c] mt-0.5 shrink-0" />
+                    <span>Identified triggers and coping mechanisms</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#00bc4c] mt-0.5 shrink-0" />
+                    <span>Risk assessment scores and alerts</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#00bc4c] mt-0.5 shrink-0" />
+                    <span>Resource engagement and progress metrics</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-[#f2cb05]/10 rounded-lg p-4 text-sm">
+                <h4 className="font-semibold text-foreground mb-2">Important Notice</h4>
+                <p className="text-muted-foreground">
+                  The patient can revoke data sharing access at any time through their Cozy app. 
+                  You will be notified immediately if access is revoked.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="consent"
+                    checked={consentAgreed}
+                    onCheckedChange={(checked) => setConsentAgreed(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="consent" className="text-sm text-foreground cursor-pointer">
+                    I understand the scope of data being shared and agree to use this information solely for the patient's clinical care.
+                  </label>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="revocation"
+                    checked={dataRevocationAgreed}
+                    onCheckedChange={(checked) => setDataRevocationAgreed(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="revocation" className="text-sm text-foreground cursor-pointer">
+                    I acknowledge that the patient may revoke access at any time, and I will respect their decision.
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowConsentModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConsentAgree}
+                disabled={!consentAgreed || !dataRevocationAgreed}
+                className="bg-[#0460d8] hover:bg-[#0460d8]/90 text-white"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Agree & Connect
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    )
   }
 
   // Patient Detail View
@@ -509,7 +767,13 @@ export default function ProviderDashboard() {
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <CozyLogo className="w-10 h-10" />
+              <Image
+                src="/images/cozy-logo.png"
+                alt="Cozy"
+                width={40}
+                height={40}
+                className="rounded-lg"
+              />
               <div>
                 <h1 className="font-semibold text-lg">Cozy</h1>
                 <p className="text-xs text-sidebar-foreground/60">Provider Dashboard</p>
@@ -1020,6 +1284,274 @@ export default function ProviderDashboard() {
     )
   }
 
+  // Reports View
+  if (activeNav === "Reports") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        {/* Sidebar */}
+        <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
+          <div className="p-6 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <Image
+                src="/images/cozy-logo.png"
+                alt="Cozy"
+                width={40}
+                height={40}
+                className="rounded-lg"
+              />
+              <div>
+                <h1 className="font-semibold text-lg">Cozy</h1>
+                <p className="text-xs text-sidebar-foreground/60">Provider Dashboard</p>
+              </div>
+            </div>
+          </div>
+
+          <nav className="flex-1 p-4">
+            <ul className="space-y-1">
+              {navItems.map((item) => (
+                <li key={item.label}>
+                  <button
+                    onClick={() => setActiveNav(item.label)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left",
+                      activeNav === item.label
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="p-4 border-t border-sidebar-border">
+            <div className="flex items-center gap-3 px-4 py-2">
+              <div className="w-9 h-9 rounded-full bg-[#0460d8] flex items-center justify-center text-white font-medium text-sm">
+                DR
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">Dr. Rebecca Moore</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">Clinical Therapist</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content - Reports */}
+        <main className="flex-1 p-8 overflow-auto">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">Audit-Ready Reports</h2>
+              <p className="text-muted-foreground mt-1">Generate compliance reports for institutional partners</p>
+            </div>
+            <Button onClick={handleGenerateReport} className="bg-[#0460d8] hover:bg-[#0460d8]/90 text-white">
+              <Download className="w-4 h-4 mr-2" />
+              Generate Monthly Report
+            </Button>
+          </div>
+
+          {/* Report Summary Cards */}
+          <div className="grid grid-cols-4 gap-4 mb-8">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#0460d8]/10 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[#0460d8]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">502</p>
+                  <p className="text-sm text-muted-foreground">Total Sessions</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#00bc4c]/10 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-[#00bc4c]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">65</p>
+                  <p className="text-sm text-muted-foreground">Avg Mood Score</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#f2cb05]/10 flex items-center justify-center">
+                  <FileCheck className="w-5 h-5 text-[#f2cb05]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">24</p>
+                  <p className="text-sm text-muted-foreground">Assessments</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#f25c05]/10 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-[#f25c05]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-foreground">8</p>
+                  <p className="text-sm text-muted-foreground">Risk Alerts</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            {/* Mood Trend Chart */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-lg font-semibold mb-4">Monthly Mood Trends</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyMoodData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="avgMood"
+                      stroke="#0460d8"
+                      strokeWidth={3}
+                      dot={{ fill: "#0460d8", strokeWidth: 2, r: 6 }}
+                      name="Average Mood"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Risk Distribution */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-lg font-semibold mb-4">Patient Risk Distribution</h3>
+              <div className="h-64 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={riskDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {riskDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Report Generator */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-[#0460d8]/10 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-[#0460d8]" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Monthly Report Generator</h3>
+                <p className="text-sm text-muted-foreground">One-click PDF generation for compliance</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h4 className="font-medium text-foreground">Report Contents</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-[#00bc4c]" />
+                    <span className="text-sm">Total sessions logged</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-[#00bc4c]" />
+                    <span className="text-sm">Mood trend analytics</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-[#00bc4c]" />
+                    <span className="text-sm">Assessment scores</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-[#00bc4c]" />
+                    <span className="text-sm">Risk history timeline</span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-[#00bc4c]" />
+                    <span className="text-sm">Engagement metrics</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-foreground">Previous Reports</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">February 2024 Report</p>
+                        <p className="text-xs text-muted-foreground">Generated Mar 1, 2024</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">January 2024 Report</p>
+                        <p className="text-xs text-muted-foreground">Generated Feb 1, 2024</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">December 2023 Report</p>
+                        <p className="text-xs text-muted-foreground">Generated Jan 1, 2024</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   // Main Patient List View
   return (
     <div className="flex min-h-screen bg-background">
@@ -1027,7 +1559,13 @@ export default function ProviderDashboard() {
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <CozyLogo className="w-10 h-10" />
+            <Image
+              src="/images/cozy-logo.png"
+              alt="Cozy"
+              width={40}
+              height={40}
+              className="rounded-lg"
+            />
             <div>
               <h1 className="font-semibold text-lg">Cozy</h1>
               <p className="text-xs text-sidebar-foreground/60">Provider Dashboard</p>
