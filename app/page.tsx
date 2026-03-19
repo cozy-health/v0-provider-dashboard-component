@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import {
   Users,
   FileText,
@@ -566,7 +565,7 @@ export default function ProviderDashboard() {
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <Image
+              <img
                 src="/images/cozy-logo.png"
                 alt="Cozy"
                 width={80}
@@ -767,7 +766,7 @@ export default function ProviderDashboard() {
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <Image
+              <img
                 src="/images/cozy-logo.png"
                 alt="Cozy"
                 width={40}
@@ -1292,7 +1291,7 @@ export default function ProviderDashboard() {
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <Image
+              <img
                 src="/images/cozy-logo.png"
                 alt="Cozy"
                 width={40}
@@ -1559,7 +1558,7 @@ export default function ProviderDashboard() {
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <Image
+            <img
               src="/images/cozy-logo.png"
               alt="Cozy"
               width={40}
