@@ -95,6 +95,7 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Embla initializes viewport state after mount; safe to suppress
     onSelect(api)
     api.on('reInit', onSelect)
     api.on('select', onSelect)

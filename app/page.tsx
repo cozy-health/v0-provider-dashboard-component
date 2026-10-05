@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import {
   Users,
   FileText,
@@ -18,14 +19,12 @@ import {
   CheckCircle2,
   Circle,
   Send,
-  X,
   Search,
   AlertTriangle,
   Zap,
   Brain,
   Download,
   Calendar,
-  BarChart2,
   Shield,
   FileCheck,
   ChevronRight,
@@ -565,7 +564,7 @@ export default function ProviderDashboard() {
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <img
+              <Image
                 src="/images/cozy-logo.png"
                 alt="Cozy"
                 width={80}
@@ -620,7 +619,7 @@ export default function ProviderDashboard() {
 
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">Patient Connection Code</label>
-                <p className="text-xs text-muted-foreground mb-3">Enter the 6-digit code from your patient's Cozy app</p>
+                <p className="text-xs text-muted-foreground mb-3">Enter the 6-digit code from your patient&apos;s Cozy app</p>
                 <div className="flex justify-center gap-2">
                   {onboardingForm.patientCode.map((digit, index) => (
                     <Input
@@ -715,7 +714,7 @@ export default function ProviderDashboard() {
                     className="mt-0.5"
                   />
                   <label htmlFor="consent" className="text-sm text-foreground cursor-pointer">
-                    I understand the scope of data being shared and agree to use this information solely for the patient's clinical care.
+                    I understand the scope of data being shared and agree to use this information solely for the patient&apos;s clinical care.
                   </label>
                 </div>
 
@@ -766,7 +765,7 @@ export default function ProviderDashboard() {
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <img
+              <Image
                 src="/images/cozy-logo.png"
                 alt="Cozy"
                 width={40}
@@ -1291,7 +1290,7 @@ export default function ProviderDashboard() {
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <img
+              <Image
                 src="/images/cozy-logo.png"
                 alt="Cozy"
                 width={40}
@@ -1558,7 +1557,7 @@ export default function ProviderDashboard() {
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <img
+            <Image
               src="/images/cozy-logo.png"
               alt="Cozy"
               width={40}
