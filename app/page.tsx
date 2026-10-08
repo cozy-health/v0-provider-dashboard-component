@@ -147,13 +147,13 @@ const mockPatients: Patient[] = [
     age: 28,
     startDate: "Jan 15, 2024",
     moodData: [
-      { date: "Mon", mood: 72, triggers: 2 },
-      { date: "Tue", mood: 65, triggers: 3 },
-      { date: "Wed", mood: 58, triggers: 4 },
-      { date: "Thu", mood: 45, triggers: 5 },
-      { date: "Fri", mood: 38, triggers: 6 },
-      { date: "Sat", mood: 42, triggers: 4 },
-      { date: "Sun", mood: 35, triggers: 5 },
+      { date: "Mon", mood: 7.2, triggers: 2 },
+      { date: "Tue", mood: 6.5, triggers: 3 },
+      { date: "Wed", mood: 5.8, triggers: 4 },
+      { date: "Thu", mood: 4.5, triggers: 5 },
+      { date: "Fri", mood: 3.8, triggers: 6 },
+      { date: "Sat", mood: 4.2, triggers: 4 },
+      { date: "Sun", mood: 3.5, triggers: 5 },
     ],
     triggers: [
       { name: "Work Deadlines", frequency: 8, impact: "high" },
@@ -181,13 +181,13 @@ const mockPatients: Patient[] = [
     age: 34,
     startDate: "Feb 3, 2024",
     moodData: [
-      { date: "Mon", mood: 55, triggers: 2 },
-      { date: "Tue", mood: 58, triggers: 2 },
-      { date: "Wed", mood: 52, triggers: 3 },
-      { date: "Thu", mood: 60, triggers: 1 },
-      { date: "Fri", mood: 55, triggers: 2 },
-      { date: "Sat", mood: 62, triggers: 1 },
-      { date: "Sun", mood: 58, triggers: 2 },
+      { date: "Mon", mood: 5.5, triggers: 2 },
+      { date: "Tue", mood: 5.8, triggers: 2 },
+      { date: "Wed", mood: 5.2, triggers: 3 },
+      { date: "Thu", mood: 6, triggers: 1 },
+      { date: "Fri", mood: 5.5, triggers: 2 },
+      { date: "Sat", mood: 6.2, triggers: 1 },
+      { date: "Sun", mood: 5.8, triggers: 2 },
     ],
     triggers: [
       { name: "Social Situations", frequency: 5, impact: "medium" },
@@ -212,13 +212,13 @@ const mockPatients: Patient[] = [
     age: 31,
     startDate: "Dec 20, 2023",
     moodData: [
-      { date: "Mon", mood: 75, triggers: 1 },
-      { date: "Tue", mood: 78, triggers: 0 },
-      { date: "Wed", mood: 80, triggers: 1 },
-      { date: "Thu", mood: 76, triggers: 1 },
-      { date: "Fri", mood: 82, triggers: 0 },
-      { date: "Sat", mood: 85, triggers: 0 },
-      { date: "Sun", mood: 83, triggers: 1 },
+      { date: "Mon", mood: 7.5, triggers: 1 },
+      { date: "Tue", mood: 7.8, triggers: 0 },
+      { date: "Wed", mood: 8, triggers: 1 },
+      { date: "Thu", mood: 7.6, triggers: 1 },
+      { date: "Fri", mood: 8.2, triggers: 0 },
+      { date: "Sat", mood: 8.5, triggers: 0 },
+      { date: "Sun", mood: 8.3, triggers: 1 },
     ],
     triggers: [
       { name: "Minor Work Stress", frequency: 2, impact: "low" },
@@ -240,13 +240,13 @@ const mockPatients: Patient[] = [
     age: 42,
     startDate: "Mar 1, 2024",
     moodData: [
-      { date: "Mon", mood: 50, triggers: 3 },
-      { date: "Tue", mood: 45, triggers: 4 },
-      { date: "Wed", mood: 40, triggers: 5 },
-      { date: "Thu", mood: 35, triggers: 6 },
-      { date: "Fri", mood: 30, triggers: 7 },
-      { date: "Sat", mood: 28, triggers: 6 },
-      { date: "Sun", mood: 32, triggers: 5 },
+      { date: "Mon", mood: 5, triggers: 3 },
+      { date: "Tue", mood: 4.5, triggers: 4 },
+      { date: "Wed", mood: 4, triggers: 5 },
+      { date: "Thu", mood: 3.5, triggers: 6 },
+      { date: "Fri", mood: 3, triggers: 7 },
+      { date: "Sat", mood: 2.8, triggers: 6 },
+      { date: "Sun", mood: 3.2, triggers: 5 },
     ],
     triggers: [
       { name: "Job Loss", frequency: 7, impact: "high" },
@@ -272,13 +272,13 @@ const mockPatients: Patient[] = [
     age: 26,
     startDate: "Jan 8, 2024",
     moodData: [
-      { date: "Mon", mood: 70, triggers: 1 },
-      { date: "Tue", mood: 72, triggers: 1 },
-      { date: "Wed", mood: 75, triggers: 0 },
-      { date: "Thu", mood: 73, triggers: 1 },
-      { date: "Fri", mood: 78, triggers: 0 },
-      { date: "Sat", mood: 80, triggers: 0 },
-      { date: "Sun", mood: 77, triggers: 1 },
+      { date: "Mon", mood: 7, triggers: 1 },
+      { date: "Tue", mood: 7.2, triggers: 1 },
+      { date: "Wed", mood: 7.5, triggers: 0 },
+      { date: "Thu", mood: 7.3, triggers: 1 },
+      { date: "Fri", mood: 7.8, triggers: 0 },
+      { date: "Sat", mood: 8, triggers: 0 },
+      { date: "Sun", mood: 7.7, triggers: 1 },
     ],
     triggers: [
       { name: "Academic Pressure", frequency: 2, impact: "low" },
@@ -298,13 +298,13 @@ const mockPatients: Patient[] = [
     age: 38,
     startDate: "Feb 14, 2024",
     moodData: [
-      { date: "Mon", mood: 60, triggers: 2 },
-      { date: "Tue", mood: 55, triggers: 3 },
-      { date: "Wed", mood: 58, triggers: 2 },
-      { date: "Thu", mood: 52, triggers: 3 },
-      { date: "Fri", mood: 50, triggers: 3 },
-      { date: "Sat", mood: 55, triggers: 2 },
-      { date: "Sun", mood: 53, triggers: 2 },
+      { date: "Mon", mood: 6, triggers: 2 },
+      { date: "Tue", mood: 5.5, triggers: 3 },
+      { date: "Wed", mood: 5.8, triggers: 2 },
+      { date: "Thu", mood: 5.2, triggers: 3 },
+      { date: "Fri", mood: 5, triggers: 3 },
+      { date: "Sat", mood: 5.5, triggers: 2 },
+      { date: "Sun", mood: 5.3, triggers: 2 },
     ],
     triggers: [
       { name: "Work-Life Balance", frequency: 5, impact: "medium" },
@@ -329,13 +329,13 @@ const mockPatients: Patient[] = [
     age: 29,
     startDate: "Nov 5, 2023",
     moodData: [
-      { date: "Mon", mood: 82, triggers: 0 },
-      { date: "Tue", mood: 85, triggers: 0 },
-      { date: "Wed", mood: 83, triggers: 1 },
-      { date: "Thu", mood: 88, triggers: 0 },
-      { date: "Fri", mood: 86, triggers: 0 },
-      { date: "Sat", mood: 90, triggers: 0 },
-      { date: "Sun", mood: 88, triggers: 0 },
+      { date: "Mon", mood: 8.2, triggers: 0 },
+      { date: "Tue", mood: 8.5, triggers: 0 },
+      { date: "Wed", mood: 8.3, triggers: 1 },
+      { date: "Thu", mood: 8.8, triggers: 0 },
+      { date: "Fri", mood: 8.6, triggers: 0 },
+      { date: "Sat", mood: 9, triggers: 0 },
+      { date: "Sun", mood: 8.8, triggers: 0 },
     ],
     triggers: [],
     copingMechanisms: [
@@ -355,9 +355,9 @@ const navItems = [
 
 // Report data
 const monthlyMoodData = [
-  { month: "Jan", avgMood: 62, sessions: 145 },
-  { month: "Feb", avgMood: 65, sessions: 168 },
-  { month: "Mar", avgMood: 68, sessions: 189 },
+  { month: "Jan", avgMood: 6.2, sessions: 145 },
+  { month: "Feb", avgMood: 6.5, sessions: 168 },
+  { month: "Mar", avgMood: 6.8, sessions: 189 },
 ]
 
 const riskDistribution = [
@@ -754,10 +754,9 @@ export default function ProviderDashboard() {
   // Patient Detail View
   if (selectedPatient) {
     const moodTrend = getMoodTrend(selectedPatient.moodData)
-    const avgMood = Math.round(
+    const avgMood = (
       selectedPatient.moodData.reduce((sum, d) => sum + d.mood, 0) /
-        selectedPatient.moodData.length
-    )
+        Math.max(selectedPatient.moodData.length, 1)).toFixed(1)
 
     return (
       <div className="flex min-h-screen bg-background">
@@ -960,9 +959,9 @@ export default function ProviderDashboard() {
                 <div>
                   <p className="text-2xl font-semibold">
                     {moodTrend >= 0 ? "+" : ""}
-                    {moodTrend}%
+                    {moodTrend.toFixed(1)} points
                   </p>
-                  <p className="text-sm text-muted-foreground">Weekly Trend</p>
+                  <p className="text-sm text-muted-foreground">Change this week</p>
                 </div>
               </div>
             </div>
@@ -1005,17 +1004,18 @@ export default function ProviderDashboard() {
             <TabsContent value="overview" className="space-y-6">
               {/* Mood Timeline */}
               <div className="bg-card border border-border rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">Mood Timeline</h3>
+                <h3 className="text-lg font-semibold mb-4">Weekly Mood Trend (1-10)</h3>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={selectedPatient.moodData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} domain={[1, 10]} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
+                          backgroundColor: "var(--card)",
+                          color: "var(--card-foreground)",
+                          border: "1px solid var(--border)",
                           borderRadius: "8px",
                         }}
                       />
@@ -1028,20 +1028,26 @@ export default function ProviderDashboard() {
                         dot={{ fill: "#0460d8", strokeWidth: 2 }}
                         name="Mood Score"
                       />
-                      <Line
-                        type="monotone"
-                        dataKey="triggers"
-                        stroke="#f25c05"
-                        strokeWidth={2}
-                        dot={{ fill: "#f25c05", strokeWidth: 2 }}
-                        name="Trigger Events"
-                        yAxisId={0}
-                      />
+
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-lg font-semibold mb-4">Weekly Trigger Frequency (count)</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={selectedPatient.moodData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={12} />
+                      <YAxis allowDecimals={false} domain={[0, "auto"]} stroke="var(--muted-foreground)" fontSize={12} />
+                      <Tooltip contentStyle={{ backgroundColor: "var(--card)", color: "var(--card-foreground)", border: "1px solid var(--border)" }} />
+                      <Bar dataKey="triggers" name="Trigger count" fill="#f25c05" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
               {/* Two Column Layout */}
               <div className="grid grid-cols-2 gap-6">
                 {/* Top Triggers */}
@@ -1051,7 +1057,7 @@ export default function ProviderDashboard() {
                     Top Triggers
                   </h3>
                   <div className="space-y-3">
-                    {selectedPatient.triggers.slice(0, 4).map((trigger, i) => (
+                    {[...selectedPatient.triggers].sort((a, b) => b.frequency - a.frequency).slice(0, 4).map((trigger, i) => (
                       <div key={i} className="flex items-center justify-between">
                         <span className="font-medium">{trigger.name}</span>
                         <div className="flex items-center gap-2">
@@ -1096,13 +1102,14 @@ export default function ProviderDashboard() {
                 <div className="h-72 mb-6">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={selectedPatient.triggers}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
+                          backgroundColor: "var(--card)",
+                          color: "var(--card-foreground)",
+                          border: "1px solid var(--border)",
                           borderRadius: "8px",
                         }}
                       />
@@ -1153,13 +1160,14 @@ export default function ProviderDashboard() {
                 <div className="h-72 mb-6">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={selectedPatient.copingMechanisms}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
+                      <YAxis stroke="var(--muted-foreground)" fontSize={12} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
+                          backgroundColor: "var(--card)",
+                          color: "var(--card-foreground)",
+                          border: "1px solid var(--border)",
                           borderRadius: "8px",
                         }}
                       />
@@ -1407,13 +1415,14 @@ export default function ProviderDashboard() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyMoodData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
+                    <YAxis stroke="var(--muted-foreground)" fontSize={12} domain={[1, 10]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "var(--card)",
+                          color: "var(--card-foreground)",
+                        border: "1px solid var(--border)",
                         borderRadius: "8px",
                       }}
                     />
@@ -1451,8 +1460,9 @@ export default function ProviderDashboard() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "var(--card)",
+                          color: "var(--card-foreground)",
+                        border: "1px solid var(--border)",
                         borderRadius: "8px",
                       }}
                     />
@@ -1724,7 +1734,7 @@ export default function ProviderDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockPatients
+              {[...mockPatients]
                 .sort((a, b) => {
                   const order = { high: 0, moderate: 1, stable: 2 }
                   return order[a.riskLevel] - order[b.riskLevel]
