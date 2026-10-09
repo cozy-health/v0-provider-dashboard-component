@@ -32,7 +32,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ac
       method: "POST", headers: { Accept: "application/json", "Content-Type": "application/json" },
       body: JSON.stringify(body), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30000),
     })
-    if (result.status === 429) return reply("Too many attempts. Please wait and retry.", 429)
+    if (result.status === 429) {
+      const value = result.headers.get("Retry-After")
+      const seconds = value && /^\d+$/.test(value) ? Number(value) : 0
+      const minutes = Math.max(1, Math.ceil(seconds / 60))
+      const response = reply(seconds > 0 ? `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}. Check your inbox and spam folder for a code already sent.` : "Too many attempts. Please wait and retry.", 429)
+      if (seconds > 0) response.headers.set("Retry-After", String(seconds))
+      return response
+    }
     if (!result.ok) return reply(action === "reset-password" && [400, 404, 422].includes(result.status) ? "The reset code or password was not accepted. Request a new code and retry." : "Password reset is temporarily unavailable. Please retry.", action === "forgot-password" ? 503 : result.status)
     return reply(action === "forgot-password" ? "If an account exists with that email, you'll receive a reset code." : "Password reset. Log in with your new one.")
   } catch { return reply("Password reset is temporarily unavailable. Please retry.", 503) }

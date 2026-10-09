@@ -17,6 +17,10 @@ const backend = createServer(async (request, response) => {
   const url = new URL(request.url, 'http://localhost'), path = url.pathname.replace('/api/v1/admin/', '')
   response.setHeader('Content-Type', 'application/json')
   const send = (code, body) => { response.writeHead(code); response.end(JSON.stringify(body)) }
+  if (url.pathname === '/api/v1/auth/forgot-password') {
+    response.setHeader('Retry-After', '125')
+    return send(429, { message: 'Too many requests.' })
+  }
   if (!availableService) return send(500, { message: 'DO NOT EXPOSE INTERNAL EXCEPTION' })
   if (path === 'auth/login') {
     let raw = ''; for await (const chunk of request) raw += chunk
@@ -47,6 +51,13 @@ try {
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.ADMIN_DASHBOARD_ORIGIN = origin
   let cookie = ''
   const request = (path, method = 'GET', data, extras = {}) => fetch(`${origin}/api/admin/${path}`, { method, redirect: 'manual', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1', Cookie: cookie, ...extras }, ...(data !== undefined ? { body: JSON.stringify(data) } : {}) })
+  const resetThrottle = await fetch(`${origin}/api/admin-password/forgot-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1' },
+    body: JSON.stringify({ email: 'operator@example.test' }),
+  })
+  assert.equal(resetThrottle.status, 429)
+  assert.equal(resetThrottle.headers.get('Retry-After'), '125')
+  assert.match((await resetThrottle.json()).message, /Try again in 3 minutes/)
   assert.equal((await fetch(`${origin}/admin`, { redirect: 'manual' })).status, 307)
   assert.equal((await request('metrics/overview')).status, 401)
   assert.equal((await request('auth/login', 'POST', {}, { Origin: 'https://evil.test' })).status, 403)
