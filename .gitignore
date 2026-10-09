@@ -26,3 +26,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Temporary files and generated outputs
+analyze.txt
+analyze_*.txt
+*.log
+build/
+.dart_tool/
+.next/
+node_modules/
+.DS_Store
+Thumbs.db
+scratch/
+tmp/
