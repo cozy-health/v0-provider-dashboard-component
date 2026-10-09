@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto"
 
 export const SESSION_SECONDS = 1800
 export const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-cozy-provider" : "cozy-provider"
-export type ProviderSession = { token: string; expires: number }
+export type ProviderSession = { token: string; refreshToken?: string; expires: number }
 
 function key() {
   const secret = process.env.PROVIDER_SESSION_SECRET

@@ -36,7 +36,12 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   const logout = path === "auth/logout" && method === "POST"
   const download = /^reports\/\d+\/pdf$/.test(path) && method === "GET"
   if (!publicAuth && !logout && !download && !allowedRoute(path, method)) return error("Page not found.", 404)
-  const session = openSession(request.cookies.get(SESSION_COOKIE)?.value)
+  let session = openSession(request.cookies.get(SESSION_COOKIE)?.value)
+  let refreshed = false
+  const renewCookie = (response: NextResponse) => {
+    if (refreshed && session) response.cookies.set(SESSION_COOKIE, sealSession(session), { ...cookieOptions, maxAge: Math.max(1, Math.floor((session.expires - Date.now()) / 1000)) })
+    return response
+  }
   if (!publicAuth && !session) return clear(error("Your session expired. Please sign in again.", 401))
   try {
     const base = apiBase()
@@ -59,7 +64,19 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       body = JSON.stringify(data)
       headers["Content-Type"] = "application/json"
     }
-    const upstream = (url: URL, verb = method, payload = body) => fetch(url, { method: verb, headers, body: payload, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60000) })
+    const upstream = async (url: URL, verb = method, payload = body) => {
+      const send = () => fetch(url, { method: verb, headers, body: payload, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60000) })
+      const result = await send()
+      if (result.status !== 401 || publicAuth || logout || refreshed || !session?.refreshToken) return result
+      const renewal = await fetch(new URL("auth/refresh", base), { method: "POST", headers: { Accept: "application/json", "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: session.refreshToken }), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30000) })
+      if (!renewal.ok) return result
+      const pair = (await renewal.json()).data
+      if (typeof pair?.token !== "string" || typeof pair?.refresh_token !== "string") return result
+      session = { ...session, token: pair.token, refreshToken: pair.refresh_token }
+      headers.Authorization = `Bearer ${session.token}`
+      refreshed = true
+      return send()
+    }
     if (download) {
       const id = segments[1]
       const issued = await upstream(new URL(`reports/${id}/download`, base), "GET", undefined)
@@ -70,7 +87,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       const pdf = await upstream(file, "GET", undefined)
       if (!pdf.ok) return clearIfUnauthorized(error("This report is no longer available. Generate a new report with current consent.", pdf.status), pdf.status)
       if (!pdf.headers.get("content-type")?.startsWith("application/pdf")) return error("Invalid report response.", 502)
-      return new NextResponse(await pdf.arrayBuffer(), { headers: { ...noStore, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="provider-report-${id}.pdf"` } })
+      return renewCookie(new NextResponse(await pdf.arrayBuffer(), { headers: { ...noStore, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="provider-report-${id}.pdf"` } }))
     }
     const target = new URL(path, base)
     for (const name of ["page", "per_page", "from", "to", "action", "resource_type"]) {
@@ -98,10 +115,10 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     if (login) {
       if (typeof data.data?.token !== "string" || !data.data?.provider) return error("Invalid sign-in response.", 502)
       const response = NextResponse.json({ provider: data.data.provider }, { headers: noStore })
-      response.cookies.set(SESSION_COOKIE, sealSession({ token: data.data.token, expires: Date.now() + SESSION_SECONDS * 1000 }), { ...cookieOptions, maxAge: SESSION_SECONDS })
+      response.cookies.set(SESSION_COOKIE, sealSession({ token: data.data.token, refreshToken: data.data.refresh_token, expires: Date.now() + SESSION_SECONDS * 1000 }), { ...cookieOptions, maxAge: SESSION_SECONDS })
       return response
     }
-    return NextResponse.json(data, { status: result.status, headers: noStore })
+    return renewCookie(NextResponse.json(data, { status: result.status, headers: noStore }))
   } catch { return error("The provider service is temporarily unavailable. Please retry.", 503) }
 }
 function clearIfUnauthorized(response: NextResponse, status: number) { return status === 401 ? clear(response) : response }

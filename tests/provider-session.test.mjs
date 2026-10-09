@@ -22,6 +22,14 @@ test('session encrypts credentials, authenticates ciphertext and enforces expiry
   process.env.PROVIDER_SESSION_SECRET = key
 })
 
+test('provider refresh credentials remain encrypted and cannot extend browser expiry', () => {
+  const session = { token: 'access-secret', refreshToken: 'refresh-secret', expires: Date.now() + 60000 }
+  const cookie = sealSession(session)
+  assert.deepEqual(openSession(cookie), session)
+  assert.ok(!Buffer.from(cookie, 'base64url').toString().includes('refresh-secret'))
+  assert.equal(openSession(sealSession({ ...session, expires: Date.now() - 1 })), null)
+})
+
 test('CSRF requires configured exact origin and explicit request header', () => {
   const request = headers => new Request('https://dashboard.example.test/api/provider/me', { method: 'PATCH', headers })
   assert.equal(validOrigin(request({ origin: 'https://dashboard.example.test', 'x-cozy-request': '1' })), true)
