@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test tests/provider-session.test.mjs",
+    "test:integration": "node tests/provider-integration.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
