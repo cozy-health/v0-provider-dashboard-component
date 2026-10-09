@@ -19,6 +19,11 @@ let assignments = []
 let notes = []
 let reports = []
 let rosterEmpty = false
+let documentConfig = { enforce_blocking: false, documents: {
+  tos: { title: 'Provider Terms of Service', version: 'draft-0.1', published: false, required: true, content: null },
+  privacy_policy: { title: 'Provider Privacy Policy', version: 'draft-0.1', published: false, required: true, content: null },
+} }
+let documentConsents = []
 const client = () => ({ user_id: 10, name: 'Test', linked_at: '2026-10-01T10:00:00Z', consent_flags: consent })
 const backend = createServer(async (request, response) => {
   const url = new URL(request.url, 'http://localhost')
@@ -37,6 +42,17 @@ const backend = createServer(async (request, response) => {
   if (path === 'auth/forgot-password' || path === 'auth/reset-password') return send({ message: 'Reset request accepted.' })
   if (request.headers.authorization !== 'Bearer test-bearer-secret') return send({ message: 'Unauthorized' }, 401)
   if (path === 'auth/logout') return send({ message: 'Signed out' })
+  if (path === 'consent-config') return send({ consent: documentConfig })
+  if (path === 'me/consents') {
+    if (request.method === 'POST') {
+      const data = JSON.parse(body)
+      assert.equal(data.actor_id, provider.id)
+      const record = { ...data, status: data.pre_acceptance ? 'pre_acceptance' : 'accepted' }
+      documentConsents = [...documentConsents.filter(row => row.document_type !== data.document_type || row.version !== data.version), record]
+      return send({ owner_id: provider.id, data: record })
+    }
+    return send({ owner_id: provider.id, data: documentConsents })
+  }
   if (path === 'me') { if (request.method === 'PATCH') Object.assign(provider, JSON.parse(body)); return send({ data: { provider } }) }
   if (path === 'clients') return send(rosterEmpty ? [] : [client()])
   if (path.startsWith('clients/10') && !linked) return send({ message: 'No link' }, 404)
@@ -145,6 +161,7 @@ try {
     page.on('pageerror', error => errors.push(error.message))
     page.on('dialog', dialog => dialog.accept())
     await page.goto(origin)
+    await page.waitForFunction(() => !document.querySelector('button[type="submit"]')?.disabled)
     await page.getByLabel('Email', { exact: true }).fill(provider.email)
     await page.getByLabel('Password', { exact: true }).fill('test-password')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -241,6 +258,24 @@ try {
     linked = true; rosterEmpty = true
     await page.getByRole('button', { name: 'Patients', exact: true }).click()
     await page.getByText('No linked patients yet.', { exact: false }).waitFor()
+    assert.equal(documentConsents.filter(record => record.status === 'pre_acceptance').length, 2)
+    documentConfig.documents.tos.version = 'draft-0.2'
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+    await page.getByRole('button', { name: 'Review', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Review', exact: true }).click()
+    await page.getByText('This document is still a draft.', { exact: false }).waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Accept', exact: true }).count(), 0)
+    await page.getByRole('button', { name: 'Dismiss', exact: true }).click()
+    documentConfig = { enforce_blocking: true, documents: Object.fromEntries(Object.entries(documentConfig.documents).map(([type, doc]) => [type, { ...doc, version: '1.0', published: true, content: `Approved ${type} fixture.` }])) }
+    documentConsents.push({ document_type: 'privacy_policy', version: '1.0', status: 'accepted' })
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+    await page.getByRole('dialog', { name: 'Provider Terms of Service' }).waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Dismiss', exact: true }).count(), 0)
+    const consentSaved = page.waitForResponse(response => response.url().endsWith('/api/provider/me/consents') && response.request().method() === 'POST')
+    await page.getByRole('button', { name: 'Accept', exact: true }).click()
+    assert.equal((await consentSaved).status(), 200)
+    await page.getByRole('dialog', { name: 'Provider Terms of Service' }).waitFor({ state: 'detached' })
+    console.log('PASS provider document consent: silent draft tracking, skippable draft review, published blocking flag and explicit acceptance')
     await page.getByRole('button', { name: 'Sign out', exact: true }).click()
     await page.getByRole('heading', { name: 'Provider sign in' }).waitFor()
     await page.getByRole('button', { name: 'Forgot password?' }).click()

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, Empty, Failure, Loading, useData, date } from "./data-list"
 import { PatientView } from "./patient-view"
 import { ResourceLibrary, Reports, AuditLog, ProviderSettings } from "./portal-pages"
+import { ConsentNotice } from "./consent-notice"
 
 const navigation = [{ name: "Patients", icon: Users }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
 export function ProviderDashboard({ expires }: { expires: number }) {
@@ -35,6 +36,7 @@ export function ProviderDashboard({ expires }: { expires: number }) {
       <div className="p-4 border-t border-sidebar-border"><p className="text-sm font-medium break-words">{provider?.name || "Provider account"}</p><p className="text-xs opacity-70 mb-3 break-words">{provider?.practice}</p><Button variant="ghost" onClick={logout} disabled={signingOut}><LogOut className="size-4" />{signingOut ? "Signing out…" : "Sign out"}</Button></div>
     </aside>
     <main className="flex-1 min-w-0 p-4 sm:p-8 max-w-7xl">
+      {provider && <ConsentNotice key={provider.id} ownerId={provider.id} />}
       <header className="mb-8"><p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cozy Health · Provider portal</p><h1 className="text-3xl font-semibold">{patient ? "Patient overview" : view}</h1><p className="mt-2 text-sm text-muted-foreground">Patient sharing choices control the information available here.</p></header>
       {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <>
         {view === "Patients" && (patient ? <PatientView key={patient} id={patient} back={() => setPatient(null)} /> : <Roster select={setPatient} />)}
