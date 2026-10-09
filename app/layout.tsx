@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { PageAnalytics } from '@/components/page-analytics'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -27,15 +28,16 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider nonce={nonce} attribute="class" defaultTheme="system" enableSystem>
           <ThemeToggle />
           {children}
           <Toaster />
