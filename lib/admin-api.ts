@@ -4,7 +4,7 @@ export type Meta = { release: string; timezone: string; precision: string; activ
 export type MetricResponse<T> = { meta: Meta; data: T }
 export async function adminApi<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api/admin/${path}`, { ...options, cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-Cozy-Request": "1", ...options.headers } })
-  const data = await response.json()
+  const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     if ([401, 403].includes(response.status) && path !== "auth/login") window.location.replace("/admin/login?expired=1")
     throw new Error(data.message || "Admin analytics could not be loaded.")

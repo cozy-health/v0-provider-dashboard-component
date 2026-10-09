@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message) }
+  constructor(public status: number, message: string, public retryAfter = 0) { super(message) }
 }
 
 // A full document navigation discards patient data in React memory on auth changes.
@@ -7,11 +7,12 @@ export function freshNavigation(path: string) { window.location.replace(new URL(
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api/provider/${path}`, { ...options, cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-Cozy-Request": "1", ...options.headers } })
-  const data = await response.json()
+  const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     if (response.status === 401) freshNavigation("/login?expired=1")
     const validation = data.errors ? Object.values(data.errors).flat().join(" ") : null
-    throw new ApiError(response.status, validation || data.message || "Request failed.")
+    const retryAfter = Number(response.headers.get("Retry-After"))
+    throw new ApiError(response.status, validation || data.message || "Request failed. Please retry.", Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 0)
   }
   return data as T
 }

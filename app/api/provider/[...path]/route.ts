@@ -84,6 +84,14 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     }
     const data = await result.json()
     if (!result.ok) {
+      if (result.status === 429) {
+        const value = result.headers.get("Retry-After")
+        const seconds = value && /^\d+$/.test(value) ? Number(value) : 0
+        const minutes = Math.max(1, Math.ceil(seconds / 60))
+        const response = error(seconds > 0 ? `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` : "Too many attempts. Please wait and retry.", 429)
+        if (seconds > 0) response.headers.set("Retry-After", String(seconds))
+        return response
+      }
       const message = result.status === 404 ? "This data is unavailable or access has changed." : result.status >= 500 ? "The provider service is temporarily unavailable." : data.message || "Request failed."
       return clearIfUnauthorized(NextResponse.json({ message, errors: result.status === 422 ? data.errors : undefined }, { status: result.status, headers: noStore }), result.status)
     }
