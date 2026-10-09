@@ -1,3 +1,4 @@
+import { CSRF_COOKIE, csrfToken } from "../lib/csrf-server.mjs"
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
@@ -31,7 +32,8 @@ test('provider refresh credentials remain encrypted and cannot extend browser ex
 })
 
 test('CSRF requires configured exact origin and explicit request header', () => {
-  const request = headers => new Request('https://dashboard.example.test/api/provider/me', { method: 'PATCH', headers })
+  const token = csrfToken()
+  const request = headers => new Request('https://dashboard.example.test/api/provider/me', { method: 'PATCH', headers: { cookie: `${CSRF_COOKIE}=${token}`, 'x-csrf-token': token, ...headers } })
   assert.equal(validOrigin(request({ origin: 'https://dashboard.example.test', 'x-cozy-request': '1' })), true)
   assert.equal(validOrigin(request({ origin: 'https://evil.example.test', 'x-cozy-request': '1' })), false)
   assert.equal(validOrigin(request({ origin: 'https://dashboard.example.test' })), false)

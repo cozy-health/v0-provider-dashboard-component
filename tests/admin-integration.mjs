@@ -50,17 +50,20 @@ try {
   await app.prepare()
   server = createServer(app.getRequestHandler()); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.ADMIN_DASHBOARD_ORIGIN = origin; process.env.PROVIDER_DASHBOARD_ORIGIN = origin
+  const csrfResponse = await fetch(`${origin}/api/csrf`)
+  const csrfCookie = csrfResponse.headers.get('set-cookie').split(';')[0]
+  const csrf = (await csrfResponse.json()).token
   let cookie = ''
-  const request = (path, method = 'GET', data, extras = {}) => fetch(`${origin}/api/admin/${path}`, { method, redirect: 'manual', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1', Cookie: cookie, ...extras }, ...(data !== undefined ? { body: JSON.stringify(data) } : {}) })
+  const request = (path, method = 'GET', data, extras = {}) => fetch(`${origin}/api/admin/${path}`, { method, redirect: 'manual', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1', 'X-CSRF-Token': csrf, Cookie: `${cookie}; ${csrfCookie}`, ...extras }, ...(data !== undefined ? { body: JSON.stringify(data) } : {}) })
   const resetThrottle = await fetch(`${origin}/api/admin-password/forgot-password`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1', 'X-CSRF-Token': csrf, Cookie: csrfCookie },
     body: JSON.stringify({ email: 'operator@example.test' }),
   })
   assert.equal(resetThrottle.status, 429)
   assert.equal(resetThrottle.headers.get('Retry-After'), '125')
   assert.match((await resetThrottle.json()).message, /Try again in 3 minutes/)
   const providerThrottle = await fetch(`${origin}/api/provider/auth/forgot-password`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin, 'X-Cozy-Request': '1', 'X-CSRF-Token': csrf, Cookie: csrfCookie },
     body: JSON.stringify({ email: 'provider@example.test' }),
   })
   assert.equal(providerThrottle.status, 429)
@@ -73,7 +76,7 @@ try {
   const login = await request('auth/login', 'POST', { email: 'operator@example.test', password: 'fixture-only' })
   assert.equal(login.status, 200); assert.deepEqual(await login.json(), { role: 'admin' })
   cookie = login.headers.get('set-cookie').split(';')[0]
-  assert.match(login.headers.get('set-cookie'), /HttpOnly/); assert.match(login.headers.get('set-cookie'), /SameSite=strict/i)
+  assert.match(login.headers.get('set-cookie'), /HttpOnly/); assert.match(login.headers.get('set-cookie'), /SameSite=lax/i)
   assert.ok(!cookie.includes('fixture-admin-token'))
   assert.equal((await request('metrics/overview')).status, 200)
   const before = backendCalls
@@ -100,13 +103,17 @@ try {
   browser = await playwright.chromium.launch({ headless: true })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } }), errors = []
   page.on('pageerror', error => errors.push(error.message))
+  page.on('console', message => { if (message.type() === 'error') console.error('Browser console:', message.text()) })
   await page.goto(`${origin}/admin`)
+  await page.waitForFunction(() => !document.querySelector('button[type="submit"]')?.disabled)
   await page.getByLabel('Email', { exact: true }).fill('operator@example.test')
   await page.getByLabel('Password', { exact: true }).fill('fixture-only')
   await page.getByRole('button', { name: 'Show password', exact: true }).click()
+  await page.getByRole('button', { name: 'Hide password', exact: true }).waitFor()
   assert.equal(await page.getByLabel('Password', { exact: true }).getAttribute('type'), 'text')
   assert.equal(await page.getByLabel('Password', { exact: true }).inputValue(), 'fixture-only')
   await page.getByRole('button', { name: 'Hide password', exact: true }).press('Enter')
+  await page.getByRole('button', { name: 'Show password', exact: true }).waitFor()
   assert.equal(await page.getByLabel('Password', { exact: true }).getAttribute('type'), 'password')
   assert.match(page.url(), /admin\/login$/)
   await page.screenshot({ path: '../docs/AUTH_ADMIN_LOGIN.png', fullPage: true })

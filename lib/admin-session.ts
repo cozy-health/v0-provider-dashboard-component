@@ -1,3 +1,4 @@
+import { validCsrf } from "./csrf-server.mjs"
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto"
 
 export const ADMIN_COOKIE = process.env.NODE_ENV === "production" ? "__Host-cozy-admin" : "cozy-admin"
@@ -33,7 +34,7 @@ export function adminBase() {
 }
 export function validAdminOrigin(request: Request) {
   const expected = process.env.ADMIN_DASHBOARD_ORIGIN || process.env.PROVIDER_DASHBOARD_ORIGIN || (process.env.NODE_ENV !== "production" ? new URL(request.url).origin : null)
-  return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1"
+  return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1" && validCsrf(request)
 }
 export function adminRoute(path: string, method: string) {
   return method === "GET" && /^(auth\/session|metrics\/(overview|usage|retention|safety))$/.test(path)

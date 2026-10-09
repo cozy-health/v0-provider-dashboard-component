@@ -1,3 +1,4 @@
+import { validCsrf } from "./csrf-server.mjs"
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto"
 
 export const SESSION_SECONDS = 1800
@@ -53,5 +54,5 @@ export function allowedRoute(path: string, method: string) {
 
 export function validOrigin(request: Request) {
   const expected = process.env.PROVIDER_DASHBOARD_ORIGIN || (process.env.NODE_ENV !== "production" ? new URL(request.url).origin : null)
-  return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1"
+  return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1" && validCsrf(request)
 }

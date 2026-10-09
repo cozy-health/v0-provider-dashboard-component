@@ -4,7 +4,7 @@ import { allowedRoute, apiBase, openSession, sealSession, SESSION_COOKIE, SESSIO
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/" }
+const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" }
 const noStore = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }
 function error(message: string, status: number) { return NextResponse.json({ message }, { status, headers: noStore }) }
 function clear(response: NextResponse) { response.cookies.set(SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 }); return response }

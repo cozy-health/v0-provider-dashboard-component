@@ -1,5 +1,6 @@
 "use client"
 
+import { mutationHeaders } from "@/lib/csrf"
 import { useRef, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -26,7 +27,7 @@ export default function ResetPassword() {
     setError(null); setBusy(true)
     try {
       const response = await fetch(`/api/admin-password/${action}`, {
-        method: "POST", headers: { "Content-Type": "application/json", "X-Cozy-Request": "1" },
+        method: "POST", headers: { "Content-Type": "application/json", "X-Cozy-Request": "1", ...await mutationHeaders("POST") },
         body: JSON.stringify({ email: email.trim().toLowerCase(), ...(action === "reset-password" ? { token: fields?.get("token"), password: fields?.get("password") } : {}) }),
       })
       const data = await response.json().catch(() => ({}))

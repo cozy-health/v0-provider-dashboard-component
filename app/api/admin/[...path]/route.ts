@@ -3,7 +3,7 @@ import { ADMIN_COOKIE, ADMIN_SECONDS, adminBase, adminRoute, openAdmin, sealAdmi
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }
-const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/" }
+const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" }
 function error(message: string, status: number) { return NextResponse.json({ message }, { status, headers }) }
 function clear(response: NextResponse) { response.cookies.set(ADMIN_COOKIE, "", { ...cookieOptions, maxAge: 0 }); return response }
 

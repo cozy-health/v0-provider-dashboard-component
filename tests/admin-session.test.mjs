@@ -1,3 +1,4 @@
+import { CSRF_COOKIE, csrfToken } from "../lib/csrf-server.mjs"
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
@@ -25,7 +26,8 @@ test('admin routes exclude all individual-data and write endpoints', () => {
   assert.equal(adminRoute('auth/register', 'POST'), false)
 })
 test('admin CSRF requires exact origin and explicit header', () => {
-  const request = headers => new Request('https://admin.example.test/api/admin/auth/login', { method: 'POST', headers })
+  const token = csrfToken()
+  const request = headers => new Request('https://admin.example.test/api/admin/auth/login', { method: 'POST', headers: { cookie: `${CSRF_COOKIE}=${token}`, 'x-csrf-token': token, ...headers } })
   assert.ok(validAdminOrigin(request({ origin: 'https://admin.example.test', 'x-cozy-request': '1' })))
   assert.equal(validAdminOrigin(request({ origin: 'https://evil.test', 'x-cozy-request': '1' })), false)
   assert.equal(validAdminOrigin(request({ origin: 'https://admin.example.test' })), false)

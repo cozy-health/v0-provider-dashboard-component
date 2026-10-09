@@ -1,3 +1,4 @@
+import { mutationHeaders } from "./csrf"
 export class ApiError extends Error {
   constructor(public status: number, message: string, public retryAfter = 0) { super(message) }
 }
@@ -6,7 +7,7 @@ export class ApiError extends Error {
 export function freshNavigation(path: string) { window.location.replace(new URL(path, window.location.origin).href) }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api/provider/${path}`, { ...options, cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-Cozy-Request": "1", ...options.headers } })
+  const response = await fetch(`/api/provider/${path}`, { ...options, cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-Cozy-Request": "1", ...options.headers, ...await mutationHeaders(options.method) } })
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     if (response.status === 401) freshNavigation("/login?expired=1")

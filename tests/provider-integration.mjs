@@ -87,8 +87,11 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${server.address().port}`
   process.env.PROVIDER_DASHBOARD_ORIGIN = origin
+  const csrfResponse = await fetch(`${origin}/api/csrf`)
+  const csrfCookie = csrfResponse.headers.get('set-cookie').split(';')[0]
+  const csrf = (await csrfResponse.json()).token
   let cookie = ''
-  const request = (path, method = 'GET', payload, headers = {}) => fetch(`${origin}/api/provider/${path}`, { method, headers: { Cookie: cookie, Origin: origin, 'X-Cozy-Request': '1', 'Content-Type': 'application/json', ...headers }, body: payload === undefined ? undefined : JSON.stringify(payload), redirect: 'manual' })
+  const request = (path, method = 'GET', payload, headers = {}) => fetch(`${origin}/api/provider/${path}`, { method, headers: { Cookie: `${cookie}; ${csrfCookie}`, Origin: origin, 'X-Cozy-Request': '1', 'X-CSRF-Token': csrf, 'Content-Type': 'application/json', ...headers }, body: payload === undefined ? undefined : JSON.stringify(payload), redirect: 'manual' })
   const login = () => request('auth/login', 'POST', { email: provider.email, password: 'test-password', device_name: 'ignored' })
   assert.equal((await fetch(origin, { redirect: 'manual' })).status, 307)
   assert.equal((await request('clients')).status, 401)
@@ -102,7 +105,7 @@ try {
   const loginData = await signedIn.text()
   assert.ok(!loginData.includes('test-bearer-secret'))
   const setCookie = signedIn.headers.get('set-cookie')
-  assert.match(setCookie, /HttpOnly/i); assert.match(setCookie, /SameSite=strict/i); assert.match(setCookie, /Max-Age=1800/i)
+  assert.match(setCookie, /HttpOnly/i); assert.match(setCookie, /SameSite=lax/i); assert.match(setCookie, /Max-Age=1800/i)
   cookie = setCookie.split(';')[0]
   assert.equal(calls.at(-1).body.device_name, 'cozy-provider-dashboard')
   assert.equal((await request('clients')).status, 200)
@@ -177,7 +180,9 @@ try {
     await page.getByRole('tab', { name: 'Provider notes' }).click()
     await page.getByText('No provider notes yet.').waitFor()
     await page.getByLabel('New provider note').fill('Persistent test note')
+    const savedNote = page.waitForResponse(response => response.url().endsWith('/api/provider/clients/10/notes') && response.request().method() === 'POST')
     await page.getByRole('button', { name: 'Save note' }).click()
+    assert.equal((await savedNote).status(), 201)
     await page.getByText('Persistent test note', { exact: true }).waitFor()
     assert.equal(notes[0].body, 'Persistent test note')
     await page.getByLabel('New provider note').fill('Unsaved draft survives revalidation')
