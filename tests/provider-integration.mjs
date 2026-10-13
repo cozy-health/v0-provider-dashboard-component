@@ -19,6 +19,8 @@ let assignments = []
 let notes = []
 let reports = []
 let rosterEmpty = false
+let quizShareActive = true
+let quizShareRead = false
 let documentConfig = { enforce_blocking: false, documents: {
   tos: { title: 'Provider Terms of Service', version: 'draft-0.1', published: false, required: true, content: null },
   privacy_policy: { title: 'Provider Privacy Policy', version: 'draft-0.1', published: false, required: true, content: null },
@@ -55,6 +57,12 @@ const backend = createServer(async (request, response) => {
   }
   if (path === 'me') { if (request.method === 'PATCH') Object.assign(provider, JSON.parse(body)); return send({ data: { provider } }) }
   if (path === 'clients') return send(rosterEmpty ? [] : [client()])
+  if (path === 'quiz-shares') return send(paginated(linked && consent.quizzes && quizShareActive ? [{ id: 1, user_id: 10, sender: 'Test', quiz_title: 'Fixture shared assessment', completed_at: '2026-10-09T10:00:00Z', read_at: quizShareRead ? '2026-10-10T10:00:00Z' : null }] : []))
+  if (path === 'quiz-shares/1') {
+    if (!linked || !consent.quizzes || !quizShareActive) return send({ message: 'This shared result is unavailable.' }, 404)
+    quizShareRead = true
+    return send({ id: 'q1', quiz_slug: 'fixture', quiz_title: 'Fixture shared assessment', score: 4, maximum_score: 27, interpretation: 'Fixture interpretation', completed_at: '2026-10-09T10:00:00Z', disclaimer: 'Fixture disclaimer.', recommendation: 'Fixture recommendation.' })
+  }
   if (path.startsWith('clients/10') && !linked) return send({ message: 'No link' }, 404)
   if (path === 'clients/10') return send(client())
   if (path === 'clients/10/moods') return consent.moods ? send(paginated([{ id: 'm1', mood: 'anxious', intensity: 4, triggers: ['work'], custom_trigger: null, coping_strategies: ['breathing'], coping_helped: 'no', created_at: '2026-10-09T10:00:00Z' }])) : send({}, 404)
@@ -125,6 +133,10 @@ try {
   cookie = setCookie.split(';')[0]
   assert.equal(calls.at(-1).body.device_name, 'cozy-provider-dashboard')
   assert.equal((await request('clients')).status, 200)
+  assert.equal((await request('quiz-shares')).status, 200)
+  const sharedSummary = await (await request('quiz-shares/1')).json()
+  assert.equal(sharedSummary.score, 4); assert.ok(!('answers' in sharedSummary))
+  quizShareActive = false; assert.equal((await request('quiz-shares/1')).status, 404); quizShareActive = true
   assert.equal((await request('me', 'PATCH', { name: 'Updated Provider' })).status, 200)
   assert.equal((await request('auth/forgot-password', 'POST', { email: provider.email })).status, 200)
   const beforeBlocked = calls.length
@@ -161,11 +173,25 @@ try {
     page.on('pageerror', error => errors.push(error.message))
     page.on('dialog', dialog => dialog.accept())
     await page.goto(origin)
-    await page.waitForFunction(() => !document.querySelector('button[type="submit"]')?.disabled)
+    await page.waitForFunction(() => {
+      const button = document.querySelector('button[type="submit"]')
+      return button && !button.disabled
+    })
     await page.getByLabel('Email', { exact: true }).fill(provider.email)
     await page.getByLabel('Password', { exact: true }).fill('test-password')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.getByRole('button', { name: 'Shared quiz results', exact: true }).click()
+    await page.getByText('Test shared Fixture shared assessment').waitFor()
+    await page.getByRole('button', { name: 'View result', exact: true }).click()
+    await page.getByText('Score: 4 / 27', { exact: true }).waitFor()
+    await page.getByText('Fixture recommendation.', { exact: true }).waitFor()
+    quizShareActive = false
+    await page.getByRole('button', { name: 'Refresh shared results', exact: true }).click()
+    await page.getByText('No results have been shared with you yet.').waitFor()
+    assert.equal(await page.getByText('Score: 4 / 27', { exact: true }).count(), 0)
+    quizShareActive = true
+    await page.getByRole('button', { name: 'Patients', exact: true }).click()
     assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider'))
     await page.getByRole('button', { name: 'Resources', exact: true }).click()
     await page.getByText('Your resource library is empty.', { exact: false }).waitFor()

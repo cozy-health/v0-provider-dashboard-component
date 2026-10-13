@@ -41,6 +41,10 @@ test('CSRF requires configured exact origin and explicit request header', () => 
 })
 
 test('bridge allowlist excludes patient routes, arbitrary paths and unauthorized methods', () => {
+  assert.equal(allowedRoute('quiz-shares', 'GET'), true)
+  assert.equal(allowedRoute('quiz-shares/12', 'GET'), true)
+  assert.equal(allowedRoute('quiz-shares/12', 'DELETE'), false)
+  assert.equal(allowedRoute('quiz-shares', 'POST'), false)
   for (const path of ['me', 'clients', 'clients/12/moods', 'clients/12/resources', 'reports/12/download', 'access-log']) assert.equal(allowedRoute(path, 'GET'), true)
   for (const path of ['../../me', '/me', 'clients/12/../../me', 'me/resources', 'auth/register', 'reports/12/file', 'https://evil.test', 'clients/12/moods/1']) assert.equal(allowedRoute(path, 'GET'), false)
   assert.equal(allowedRoute('clients/12/moods', 'POST'), false)

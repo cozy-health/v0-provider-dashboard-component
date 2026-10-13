@@ -48,6 +48,7 @@ export function allowedRoute(path: string, method: string) {
     [/^clients\/\d+\/(notes|resources)\/\d+$/, ["DELETE"]],
     [/^resources$/, ["GET", "POST"]], [/^resources\/\d+$/, ["PATCH", "DELETE"]],
     [/^reports$/, ["GET", "POST"]], [/^reports\/\d+(\/download)?$/, ["GET"]],
+    [/^quiz-shares$/, ["GET"]], [/^quiz-shares\/\d+$/, ["GET"]],
     [/^access-log$/, ["GET"]],
   ]
   return rules.some(([pattern, methods]) => pattern.test(path) && methods.includes(method))

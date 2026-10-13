@@ -12,8 +12,9 @@ import { Card, Empty, Failure, Loading, useData, date } from "./data-list"
 import { PatientView } from "./patient-view"
 import { ResourceLibrary, Reports, AuditLog, ProviderSettings } from "./portal-pages"
 import { ConsentNotice } from "./consent-notice"
+import { QuizInbox } from "./quiz-inbox"
 
-const navigation = [{ name: "Patients", icon: Users }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
+const navigation = [{ name: "Patients", icon: Users }, { name: "Shared quiz results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
 export function ProviderDashboard({ expires }: { expires: number }) {
   const profile = useData<{ data: { provider: Provider } }>("me")
   const [view, setView] = useState<string>("Patients")
@@ -42,6 +43,7 @@ export function ProviderDashboard({ expires }: { expires: number }) {
         {view === "Patients" && (patient ? <PatientView key={patient} id={patient} back={() => setPatient(null)} /> : <Roster select={setPatient} />)}
         {view === "Resources" && <ResourceLibrary />}
         {view === "Reports" && <Reports />}
+        {view === "Shared quiz results" && <QuizInbox />}
         {view === "Audit log" && <AuditLog />}
         {view === "Settings" && <ProviderSettings provider={provider} saved={profile.reload} />}
       </>}
