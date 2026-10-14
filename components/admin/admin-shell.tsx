@@ -2,7 +2,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Menu, X, LogOut, Heart } from "lucide-react"
 import { adminApi } from "@/lib/admin-api"
 import { Button } from "@/components/ui/button"
@@ -25,12 +25,15 @@ function capability(href: string) {
  return href.includes("/manage/") && !["user-triggers", "user-coping"].includes(moduleKey!) ? "admin:content" : "admin:metrics"
 }
 export function AdminShell({ expires, children, name = "Admin", capabilities = ["admin:metrics"] }: { expires: number; children: React.ReactNode; name?: string; capabilities?: string[] }) {
+ const headerRef = useRef<HTMLElement>(null)
+ const [headerHeight, setHeaderHeight] = useState(96)
+ useEffect(() => { const header = headerRef.current; if (!header) return; const observer = new ResizeObserver(() => setHeaderHeight(header.getBoundingClientRect().height)); observer.observe(header); return () => observer.disconnect() }, [])
  const pathname = usePathname()
  const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false), [open, setOpen] = useState(false)
  useEffect(() => { const timer = window.setTimeout(() => window.location.replace("/admin/login?expired=1"), Math.max(0, expires - Date.now())); return () => window.clearTimeout(timer) }, [expires])
  useEffect(() => { if (!open) return; const listener = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false) }; window.addEventListener("keydown", listener); return () => window.removeEventListener("keydown", listener) }, [open])
  async function logout() { setBusy(true); setError(null); try { await adminApi("auth/logout", { method: "POST", body: "{}" }); window.location.replace("/admin/login") } catch (err) { setError((err as Error).message); setBusy(false) } }
- return <div className="cozy-admin min-h-screen"><header className="sticky top-0 z-30 border-b bg-card"><div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6"><div className="flex items-center gap-3"><Button variant="outline" size="icon" className="lg:hidden" aria-label={open ? "Close navigation" : "Open navigation"} aria-expanded={open} aria-controls="admin-navigation" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</Button><Image src="/images/cozy-logo.png" alt="Cozy Health" width={42} height={42} className="rounded-lg" /><div><p className="text-lg font-semibold">Cozy Health HQ</p><p className="text-xs text-muted-foreground">Hi, {name}</p></div></div><div className="flex items-center gap-3"><AdminThemeSelector /><Button variant="outline" disabled={busy} onClick={logout}><LogOut className="mr-2 size-4" />{busy ? "Signing out…" : "Logout"}</Button></div></div></header><div className="flex">{open && <button className="fixed inset-0 top-24 z-30 bg-black/50 lg:hidden" aria-label="Close navigation" onClick={() => setOpen(false)} />}<aside id="admin-navigation" className={`${open ? "block" : "hidden"} fixed bottom-0 top-24 z-40 w-60 overflow-y-auto border-r bg-card p-4 lg:sticky lg:top-24 lg:block lg:h-[calc(100vh-6rem)] lg:shrink-0`}><nav aria-label="Admin navigation" className="space-y-6">{groups.map(group => {
+ return <div className="cozy-admin min-h-screen"><header ref={headerRef} className="sticky top-0 z-30 border-b bg-card"><div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6"><div className="flex min-w-0 items-center gap-3"><Button variant="outline" size="icon" className="size-11 shrink-0 lg:hidden" aria-label={open ? "Close navigation" : "Open navigation"} aria-expanded={open} aria-controls="admin-navigation" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</Button><Image src="/images/cozy-logo.png" alt="Cozy Health" width={42} height={42} className="rounded-lg" /><div className="min-w-0"><p className="text-lg font-semibold">Cozy Health HQ</p><p className="break-all text-xs text-muted-foreground">Hi, {name}</p></div></div><div className="flex items-center gap-3"><AdminThemeSelector /><Button variant="outline" disabled={busy} onClick={logout}><LogOut className="mr-2 size-4" />{busy ? "Signing out…" : "Logout"}</Button></div></div></header><div className="flex">{open && <button style={{ top: headerHeight }} className="fixed inset-0 z-30 bg-black/50 lg:hidden" aria-label="Close navigation" onClick={() => setOpen(false)} />}<aside style={{ top: headerHeight, height: `calc(100dvh - ${headerHeight}px)` }} id="admin-navigation" className={`${open ? "block" : "hidden"} fixed bottom-0 z-40 w-60 overflow-y-auto border-r bg-card p-4 lg:sticky lg:block lg:shrink-0`}><nav aria-label="Admin navigation" className="space-y-6">{groups.map(group => {
  const visible = group.items.filter(([href]) => capabilities.includes(capability(href)))
  if (!visible.length) return null
  return <div key={group.label}><p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{group.label}</p><div className="space-y-1">{visible.map(([href, label]) => {

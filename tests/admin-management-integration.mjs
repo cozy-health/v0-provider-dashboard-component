@@ -1,3 +1,4 @@
+import { reviewThemes } from './theme-design-review.mjs'
 // Local contract fixtures only. No production accounts, email, or API writes.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -59,6 +60,7 @@ try {
  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }), errors = []
  page.on('pageerror', e => errors.push(e.message))
  await page.goto(`${origin}/admin/login`)
+ await reviewThemes(page, 'admin-login')
  await page.waitForFunction(() => !document.querySelector('button[type="submit"]')?.disabled)
  await page.getByLabel('Email', { exact: true }).fill('operator@example.test')
  await page.getByLabel('Password', { exact: true }).fill('fixture-only')
@@ -78,7 +80,8 @@ try {
  await navigation.getByRole('link', { name: 'Dashboard', exact: true }).focus()
  assert.equal(await navigation.getByRole('link', { name: 'Dashboard', exact: true }).evaluate(el => el === document.activeElement), true)
 
- await page.getByLabel('Appearance').selectOption('dark')
+ await reviewThemes(page, 'admin-dashboard')
+ await page.getByRole('button', { name: 'Switch to dark mode' }).click()
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
  assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
@@ -89,8 +92,8 @@ try {
  await mkdir('../docs/validation/admin-phases', { recursive: true })
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-dark.png', fullPage: true })
  await page.reload(); await page.getByRole('heading', { name: 'User growth · daily registrations' }).waitFor()
- assert.equal(await page.getByLabel('Appearance').inputValue(), 'dark')
- await page.getByLabel('Appearance').selectOption('light')
+ assert.equal(await page.getByRole('button', { name: 'Switch to light mode' }).count(), 1)
+ await page.getByRole('button', { name: 'Switch to light mode' }).click()
  await page.waitForFunction(() => !document.documentElement.classList.contains('dark'))
  assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
@@ -143,10 +146,11 @@ try {
  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
  await page.getByRole('link', { name: 'Datacenter', exact: true }).click()
  await page.getByRole('heading', { name: 'Mental Health Insights Dashboard', exact: true }).waitFor()
+ await reviewThemes(page, 'admin-insights')
  await page.getByRole('heading', { name: 'Reported coping helpfulness' }).waitFor()
  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-mobile.png', fullPage: true })
- await page.getByLabel('Appearance').selectOption('system')
+ await page.evaluate(() => localStorage.removeItem('theme')); await page.reload()
  await page.emulateMedia({ colorScheme: 'dark' })
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
  assert.deepEqual(errors, [])

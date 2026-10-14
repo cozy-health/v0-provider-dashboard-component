@@ -1,3 +1,4 @@
+import { reviewThemes } from './theme-design-review.mjs'
 // Local contract fixtures only: no deployed API, email delivery, or patient records.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -71,6 +72,7 @@ try {
  await page.goto(`${origin}/provider`)
  await page.getByRole('link', { name: 'Create provider account', exact: true }).click()
  await page.getByRole('heading', { name: 'Create provider account', exact: true }).waitFor()
+ await reviewThemes(page, 'provider-register')
  assert.equal(await page.locator('a[href^="/admin"]').count(), 0)
  await page.getByLabel('First name', { exact: true }).fill('Avery')
  await page.getByLabel('Last name', { exact: true }).fill('Taylor')
@@ -97,6 +99,7 @@ try {
  assert.equal(registrations, 1)
  assert.ok((await context.cookies()).find(cookie => cookie.name === 'cozy-provider')?.httpOnly)
  assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider'))
+ await reviewThemes(page, 'provider-empty')
  await page.screenshot({ path: '../docs/validation/provider-onboarding/empty-roster.png', fullPage: true })
  await page.getByRole('button', { name: 'Add patient', exact: true }).click()
  await page.getByLabel('Patient connection code').fill('000000')
@@ -118,6 +121,7 @@ try {
  await page.getByRole('checkbox').nth(0).check(); await page.getByRole('checkbox').nth(1).check()
  await page.getByRole('button', { name: 'Agree & connect' }).click()
  await page.getByRole('button', { name: 'View patient', exact: true }).waitFor()
+ await reviewThemes(page, 'provider-populated')
  assert.equal(confirmations, 1)
  await page.setViewportSize({ width: 390, height: 844 })
  await page.getByRole('button', { name: 'Add patient', exact: true }).click()

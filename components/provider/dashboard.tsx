@@ -13,6 +13,7 @@ import { PatientView } from "./patient-view"
 import { ResourceLibrary, Reports, AuditLog, ProviderSettings } from "./portal-pages"
 import { ConsentNotice } from "./consent-notice"
 import { PatientConnection } from "./patient-connection"
+import { ThemeButton } from "@/components/theme-button"
 import { QuizInbox } from "./quiz-inbox"
 
 const navigation = [{ name: "Patients", icon: Users }, { name: "Shared quiz results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
@@ -33,11 +34,11 @@ export function ProviderDashboard({ expires }: { expires: number }) {
   const provider = profile.data?.data.provider
   return <div className="min-h-screen bg-background md:flex">
     <aside className="bg-sidebar text-sidebar-foreground md:w-64 md:shrink-0 md:min-h-screen border-r border-sidebar-border">
-      <div className="flex items-center gap-3 p-6 border-b border-sidebar-border"><Image src="/images/cozy-logo.png" alt="Cozy" width={40} height={40} className="rounded-lg" /><div><p className="font-semibold text-lg">Cozy Health</p><p className="text-xs opacity-70">Provider Dashboard</p></div></div>
+      <div className="flex items-center gap-3 p-4 sm:p-6 border-b border-sidebar-border"><Image src="/images/cozy-logo.png" alt="Cozy" width={40} height={40} className="rounded-lg shrink-0" /><div className="min-w-0 flex-1"><p className="font-semibold text-lg">Cozy Health</p><p className="text-xs opacity-70">Provider Dashboard</p></div><ThemeButton /></div>
       <nav aria-label="Main navigation" className="flex overflow-x-auto gap-1 p-3 md:flex-col">{navigation.map(({ name, icon: Icon }) => <Button key={name} variant="ghost" aria-current={view === name ? "page" : undefined} onClick={() => { setView(name); setPatient(null) }} className={`justify-start shrink-0 ${view === name ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}`}><Icon className="size-4" />{name}</Button>)}</nav>
       <div className="p-4 border-t border-sidebar-border"><p className="text-sm font-medium break-words">{provider?.name || "Provider account"}</p><p className="text-xs opacity-70 mb-3 break-words">{provider?.practice}</p><Button variant="ghost" onClick={logout} disabled={signingOut}><LogOut className="size-4" />{signingOut ? "Signing out…" : "Sign out"}</Button></div>
     </aside>
-    <main className="flex-1 min-w-0 p-4 sm:p-8 max-w-7xl">
+    <main className="flex-1 min-w-0 p-4 sm:p-8 max-w-7xl pb-20">
       {provider && <ConsentNotice key={provider.id} ownerId={provider.id} />}
       <header className="mb-8"><p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cozy Health · Provider portal</p><h1 className="text-3xl font-semibold">{patient ? "Patient overview" : view}</h1><p className="mt-2 text-sm text-muted-foreground">Patient sharing choices control the information available here.</p></header>
       {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <>
