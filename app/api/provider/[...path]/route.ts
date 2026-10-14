@@ -32,7 +32,8 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   const method = request.method
   if (method !== "GET" && !validOrigin(request)) return error("Request origin could not be verified.", 403)
   const login = path === "auth/login" && method === "POST"
-  const publicAuth = login || (method === "POST" && ["auth/forgot-password", "auth/reset-password"].includes(path))
+  const register = path === "auth/register" && method === "POST"
+  const publicAuth = login || register || (method === "POST" && ["auth/forgot-password", "auth/reset-password"].includes(path))
   const logout = path === "auth/logout" && method === "POST"
   const download = /^reports\/\d+\/pdf$/.test(path) && method === "GET"
   if (!publicAuth && !logout && !download && !allowedRoute(path, method)) return error("Page not found.", 404)
@@ -56,10 +57,10 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       if (raw === null) return error("Request is too large.", 413)
       let data
       try { data = JSON.parse(raw) } catch { return error("Invalid request.", 400) }
-      if (login) {
+      if (login || register) {
         // Validate encryption configuration before issuing any backend credential.
         sealSession({ token: "configuration-check", expires: Date.now() })
-        data = { email: data.email, password: data.password, device_name: "cozy-provider-dashboard" }
+        data = register ? { name: data.name, email: data.email, password: data.password, password_confirmation: data.password_confirmation, practice: data.practice } : { email: data.email, password: data.password, device_name: "cozy-provider-dashboard" }
       }
       body = JSON.stringify(data)
       headers["Content-Type"] = "application/json"
@@ -112,9 +113,9 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       const message = result.status === 404 ? "This data is unavailable or access has changed." : result.status >= 500 ? "The provider service is temporarily unavailable." : data.message || "Request failed."
       return clearIfUnauthorized(NextResponse.json({ message, errors: result.status === 422 ? data.errors : undefined }, { status: result.status, headers: noStore }), result.status)
     }
-    if (login) {
+    if (login || register) {
       if (typeof data.data?.token !== "string" || !data.data?.provider) return error("Invalid sign-in response.", 502)
-      const response = NextResponse.json({ provider: data.data.provider }, { headers: noStore })
+      const response = NextResponse.json({ provider: data.data.provider }, { status: register ? 201 : 200, headers: noStore })
       response.cookies.set(SESSION_COOKIE, sealSession({ token: data.data.token, refreshToken: data.data.refresh_token, expires: Date.now() + SESSION_SECONDS * 1000 }), { ...cookieOptions, maxAge: SESSION_SECONDS })
       return response
     }

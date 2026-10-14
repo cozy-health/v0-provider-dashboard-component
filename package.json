@@ -10,7 +10,8 @@
     "test": "node --test tests/*.test.mjs",
     "test:integration": "node tests/provider-integration.mjs",
     "test:admin": "node tests/admin-integration.mjs",
-    "test:admin-management": "node tests/admin-management-integration.mjs"
+    "test:admin-management": "node tests/admin-management-integration.mjs",
+    "test:provider-onboarding": "node tests/provider-onboarding-integration.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

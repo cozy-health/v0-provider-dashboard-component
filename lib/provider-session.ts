@@ -40,6 +40,7 @@ export function apiBase() {
 // Only the existing provider contract can be reached through the bridge.
 export function allowedRoute(path: string, method: string) {
   const rules: [RegExp, string[]][] = [
+    [/^invitations\/(preview|connect)$/, ["POST"]],
     [/^me$/, ["GET", "PATCH"]], [/^clients$/, ["GET"]],
     [/^consent-config$/, ["GET"]], [/^me\/consents$/, ["GET", "POST"]],
     [/^clients\/\d+$/, ["GET"]],

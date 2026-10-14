@@ -37,6 +37,5 @@ export function AdminLogin() {
       <Button type="submit" className="h-11 w-full" disabled={busy || !ready}>{busy && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}{busy ? "Signing in…" : "Sign in"}</Button>
     </form>
     <p className="mt-5 text-center text-sm text-muted-foreground">Forgot your password?{" "}<Link href="/admin/reset-password" className="font-medium text-primary underline underline-offset-4">Reset it here</Link></p>
-    <p className="mt-6 text-center text-sm text-muted-foreground">Are you a provider?{" "}<Link href="/login" className="font-medium text-primary underline underline-offset-4">Provider sign in</Link></p>
   </AuthCard>
 }

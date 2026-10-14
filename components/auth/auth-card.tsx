@@ -2,7 +2,7 @@ import Image from "next/image"
 import { ShieldCheck } from "lucide-react"
 
 export function AuthCard({ title, description, audience, children }: { title: string; description: string; audience: string; children: React.ReactNode }) {
-  return <main className="min-h-screen grid place-items-center bg-muted/30 px-4 py-12 sm:px-6">
+  return <main className="min-h-screen grid place-items-center bg-background px-4 py-12 sm:px-6">
     <section className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
       <div className="mb-7 flex items-center gap-3"><Image src="/images/cozy-logo.png" alt="Cozy Health" width={48} height={48} className="rounded-xl" />
         <div><p className="text-sm font-semibold">Cozy Health</p><p className="text-xs text-muted-foreground">{audience}</p></div>

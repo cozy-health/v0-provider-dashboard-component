@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { Users, BookOpen, FileText, Settings, Shield, LogOut } from "lucide-react"
+import { Users, BookOpen, FileText, Settings, Shield, LogOut, UserRoundPlus } from "lucide-react"
 import { toast } from "sonner"
 import { api, Client, Provider, freshNavigation } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import { Card, Empty, Failure, Loading, useData, date } from "./data-list"
 import { PatientView } from "./patient-view"
 import { ResourceLibrary, Reports, AuditLog, ProviderSettings } from "./portal-pages"
 import { ConsentNotice } from "./consent-notice"
+import { PatientConnection } from "./patient-connection"
 import { QuizInbox } from "./quiz-inbox"
 
 const navigation = [{ name: "Patients", icon: Users }, { name: "Shared quiz results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
@@ -40,7 +41,7 @@ export function ProviderDashboard({ expires }: { expires: number }) {
       {provider && <ConsentNotice key={provider.id} ownerId={provider.id} />}
       <header className="mb-8"><p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cozy Health · Provider portal</p><h1 className="text-3xl font-semibold">{patient ? "Patient overview" : view}</h1><p className="mt-2 text-sm text-muted-foreground">Patient sharing choices control the information available here.</p></header>
       {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <>
-        {view === "Patients" && (patient ? <PatientView key={patient} id={patient} back={() => setPatient(null)} /> : <Roster select={setPatient} />)}
+        {view === "Patients" && (patient ? <PatientView key={patient} id={patient} back={() => setPatient(null)} /> : <Roster select={setPatient} email={provider.email} />)}
         {view === "Resources" && <ResourceLibrary />}
         {view === "Reports" && <Reports />}
         {view === "Shared quiz results" && <QuizInbox />}
@@ -51,14 +52,14 @@ export function ProviderDashboard({ expires }: { expires: number }) {
   </div>
 }
 
-function Roster({ select }: { select: (id: number) => void }) {
+function Roster({ select, email }: { select: (id: number) => void; email: string }) {
   const { data, error, loading, reload } = useData<Client[]>("clients")
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(""), [adding, setAdding] = useState(false)
   useEffect(() => { const refresh = () => reload(); window.addEventListener("focus", refresh); return () => window.removeEventListener("focus", refresh) }, [reload])
   if (loading) return <Loading />
   if (error) return <Failure error={error} retry={reload} />
   const filtered = (data || []).filter(client => client.name.toLowerCase().includes(search.toLowerCase()) || String(client.user_id).includes(search))
-  return <div className="space-y-5"><div className="flex gap-3"><Input aria-label="Search patients" placeholder="Search by first name or patient ID" value={search} onChange={event => setSearch(event.target.value)} /><Button variant="outline" onClick={reload}>Refresh</Button></div>
-    {!data?.length ? <Empty>No linked patients yet. Patients connect to your registered email through My Provider in the Cozy Health app.</Empty> : !filtered.length ? <Empty>No patients match your search.</Empty> : filtered.map(client => <Card key={client.user_id}><div className="flex flex-wrap gap-4 items-center justify-between"><div><h2 className="font-semibold text-lg">{client.name} <span className="font-normal text-sm text-muted-foreground">· Patient #{client.user_id}</span></h2><p className="text-xs text-muted-foreground mt-1">Linked {date(client.linked_at)}</p><div className="flex flex-wrap gap-2 mt-3">{Object.entries(client.consent_flags).map(([type, shared]) => <Badge key={type} variant={shared ? "secondary" : "outline"}>{type}: {shared ? "shared" : "private"}</Badge>)}</div></div><Button onClick={() => select(client.user_id)}>View patient</Button></div></Card>)}
+  return <div className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">Build your patient roster at your own pace.</p><Button onClick={() => setAdding(true)}><UserRoundPlus aria-hidden="true" className="size-4" />Add patient</Button></div>{adding && <PatientConnection email={email} close={() => setAdding(false)} connected={() => { toast.success("Patient connected."); reload() }} />}<div className="flex gap-3"><Input aria-label="Search patients" placeholder="Search by first name or patient ID" value={search} onChange={event => setSearch(event.target.value)} /><Button variant="outline" onClick={reload}>Refresh</Button></div>
+    {!data?.length ? <Empty>No linked patients yet. You can use your workspace without patients. Ask a patient to send an invitation to your registered email from My Provider in the Cozy app, then choose Add patient.</Empty> : !filtered.length ? <Empty>No patients match your search.</Empty> : filtered.map(client => <Card key={client.user_id}><div className="flex flex-wrap gap-4 items-center justify-between"><div><h2 className="font-semibold text-lg">{client.name} <span className="font-normal text-sm text-muted-foreground">· Patient #{client.user_id}</span></h2><p className="text-xs text-muted-foreground mt-1">Linked {date(client.linked_at)}</p><div className="flex flex-wrap gap-2 mt-3">{Object.entries(client.consent_flags).map(([type, shared]) => <Badge key={type} variant={shared ? "secondary" : "outline"}>{type}: {shared ? "shared" : "private"}</Badge>)}</div></div><Button onClick={() => select(client.user_id)}>View patient</Button></div></Card>)}
   </div>
 }

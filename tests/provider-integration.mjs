@@ -19,6 +19,7 @@ let assignments = []
 let notes = []
 let reports = []
 let rosterEmpty = false
+let populatedHistory = false
 let quizShareActive = true
 let quizShareRead = false
 let documentConfig = { enforce_blocking: false, documents: {
@@ -37,6 +38,9 @@ const backend = createServer(async (request, response) => {
   response.setHeader('Content-Type', 'application/json')
   function send(data, status = 200) { response.writeHead(status); response.end(JSON.stringify(data)) }
   if (!available) return send({ message: 'Internal secret must not leak' }, 500)
+  if (path === 'auth/register') {
+    return send({ message: 'Enter complete provider registration details.', errors: { name: ['A provider name is required.'] } }, 422)
+  }
   if (path === 'auth/login') {
     if (JSON.parse(body).password !== 'test-password') return send({ message: 'Credentials incorrect.', errors: { email: ['Credentials incorrect.'] } }, 422)
     return send({ data: { provider, token: 'test-bearer-secret' } })
@@ -66,8 +70,8 @@ const backend = createServer(async (request, response) => {
   if (path.startsWith('clients/10') && !linked) return send({ message: 'No link' }, 404)
   if (path === 'clients/10') return send(client())
   if (path === 'clients/10/moods') return consent.moods ? send(paginated([{ id: 'm1', mood: 'anxious', intensity: 4, triggers: ['work'], custom_trigger: null, coping_strategies: ['breathing'], coping_helped: 'no', created_at: '2026-10-09T10:00:00Z' }])) : send({}, 404)
-  if (path === 'clients/10/journals') return consent.journals ? send(paginated([])) : send({}, 404)
-  if (path === 'clients/10/quizzes') return consent.quizzes ? send(paginated([])) : send({}, 404)
+  if (path === 'clients/10/journals') return consent.journals ? send(paginated(populatedHistory ? [{ id: 'j1', title: 'Shared summary fixture', type: 'text', word_count: 42, has_voice: true, created_at: '2026-10-09T10:00:00Z' }] : [])) : send({}, 404)
+  if (path === 'clients/10/quizzes') return consent.quizzes ? send(paginated(populatedHistory ? [{ id: 'q1', quiz_slug: 'phq-9', score: 4, interpretation: 'Fixture interpretation', completed_at: '2026-10-09T10:00:00Z' }] : [])) : send({}, 404)
   if (path.startsWith('clients/10/notes')) {
     if (!consent.notes) return send({}, 404)
     if (request.method === 'POST') { const note = { id: notes.length + 1, ...JSON.parse(body), created_at: new Date().toISOString() }; notes.unshift(note); return send({ note }, 201) }
@@ -107,6 +111,7 @@ let exitCode = 0
 try {
   await app.prepare()
   server = createServer(app.getRequestHandler())
+  server.on('upgrade', app.getUpgradeHandler())
   server.on('connection', socket => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)) })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${server.address().port}`
@@ -139,8 +144,9 @@ try {
   quizShareActive = false; assert.equal((await request('quiz-shares/1')).status, 404); quizShareActive = true
   assert.equal((await request('me', 'PATCH', { name: 'Updated Provider' })).status, 200)
   assert.equal((await request('auth/forgot-password', 'POST', { email: provider.email })).status, 200)
+  assert.equal((await request('auth/register', 'POST', {})).status, 422)
+  assert.equal(calls.at(-1).path, 'auth/register')
   const beforeBlocked = calls.length
-  assert.equal((await request('auth/register', 'POST', {})).status, 404)
   assert.equal((await request('clients/10/moods', 'POST', {})).status, 404)
   assert.equal((await request('me', 'PATCH', {}, { Origin: 'https://evil.test' })).status, 403)
   assert.equal((await request('resources', 'POST', { title: 'x'.repeat(66000) })).status, 413)
@@ -166,8 +172,10 @@ try {
 
   const playwright = process.env.PROVIDER_PLAYWRIGHT_PATH ? await import(pathToFileURL(process.env.PROVIDER_PLAYWRIGHT_PATH).href) : null
   if (playwright) {
-    browser = await playwright.chromium.launch({ headless: true })
+    browser = await playwright.chromium.launch({ headless: true, ...(process.env.PROVIDER_CHROMIUM_PATH ? { executablePath: process.env.PROVIDER_CHROMIUM_PATH } : {}) })
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    // Keep development hot-reload traffic out of the HTTP portal contract test.
+    await context.routeWebSocket("**/_next/webpack-hmr**", () => {})
     const page = await context.newPage()
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
@@ -181,6 +189,10 @@ try {
     await page.getByLabel('Password', { exact: true }).fill('test-password')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.goto(`${origin}/provider`)
+    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/provider')
+    assert.equal(await page.locator('a[href^="/admin"]').count(), 0)
     await page.getByRole('button', { name: 'Shared quiz results', exact: true }).click()
     await page.getByText('Test shared Fixture shared assessment').waitFor()
     await page.getByRole('button', { name: 'View result', exact: true }).click()
@@ -192,6 +204,11 @@ try {
     assert.equal(await page.getByText('Score: 4 / 27', { exact: true }).count(), 0)
     quizShareActive = true
     await page.getByRole('button', { name: 'Patients', exact: true }).click()
+    await page.getByLabel('Search patients').fill('missing-patient')
+    await page.getByText('No patients match your search.').waitFor()
+    await page.getByLabel('Search patients').fill('10')
+    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.getByLabel('Search patients').fill('')
     assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider'))
     await page.getByRole('button', { name: 'Resources', exact: true }).click()
     await page.getByText('Your resource library is empty.', { exact: false }).waitFor()
@@ -215,6 +232,11 @@ try {
     assert.equal(await page.locator('.recharts-bar-rectangle path').count(), 2)
     await page.getByText('No shared journal entries yet.').waitFor()
     await page.getByText('No shared quiz results yet.').waitFor()
+    populatedHistory = true
+    await page.getByRole('button', { name: 'Refresh sharing' }).click()
+    await page.getByRole('heading', { name: 'Shared summary fixture' }).waitFor()
+    await page.getByText('Score: 4', { exact: false }).waitFor()
+    await page.getByText('42 words', { exact: false }).waitFor()
     await page.screenshot({ path: '../docs/PD5_PATIENT_LIGHT.png', fullPage: true })
     await page.getByRole('button', { name: 'Toggle theme' }).click()
     assert.equal(await page.locator('html').getAttribute('class'), 'dark')
@@ -235,6 +257,9 @@ try {
     await new Promise(resolve => setTimeout(resolve, 200))
     assert.ok(calls.slice(previousCalls).some(call => call.path === 'clients/10'))
     assert.equal(await page.getByLabel('New provider note').inputValue(), 'Unsaved draft survives revalidation')
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
+    await page.getByText('No provider notes yet.').waitFor()
+    assert.equal(notes.length, 0)
     await page.getByRole('tab', { name: 'Resources', exact: true }).click()
     await page.getByText('No resources assigned to this patient yet.').waitFor()
     await page.getByRole('button', { name: 'Select', exact: true }).click()
@@ -242,6 +267,9 @@ try {
     await page.getByRole('button', { name: 'Assign selected resource' }).click()
     await page.getByText('assigned', { exact: true }).waitFor()
     assert.equal(assignments.length, 1)
+    await page.getByRole('button', { name: 'Remove assignment', exact: true }).click()
+    await page.getByText('No resources assigned to this patient yet.').waitFor()
+    assert.equal(assignments.length, 0)
     await page.getByRole('button', { name: 'Generate monthly report' }).click()
     await page.getByRole('button', { name: 'Download PDF' }).waitFor()
     const downloaded = page.waitForEvent('download')
@@ -256,11 +284,20 @@ try {
     assert.equal(calls.slice(callsBefore).filter(call => /clients\/10\/(moods|journals|quizzes|notes)$/.test(call.path)).length, 0)
     await page.getByRole('button', { name: 'Audit log', exact: true }).click()
     await page.getByText('Patient #10', { exact: false }).first().waitFor()
+    await page.getByLabel('Action', { exact: true }).fill('list')
+    const filteredAudit = page.waitForResponse(response => response.url().includes('/api/provider/access-log?action=list'))
+    await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
+    assert.equal((await filteredAudit).status(), 200)
+    await page.getByRole('button', { name: 'Clear', exact: true }).click()
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     await page.getByLabel('Name', { exact: true }).fill('Saved Provider')
+    await page.getByLabel('Practice', { exact: true }).fill('Updated Test Practice')
+    await page.getByLabel('Timezone', { exact: true }).fill('Africa/Lagos')
     await page.getByRole('button', { name: 'Save settings' }).click()
     await page.getByText('Saved Provider', { exact: true }).waitFor()
     assert.equal(provider.name, 'Saved Provider')
+    assert.equal(provider.practice, 'Updated Test Practice')
+    assert.equal(provider.timezone, 'Africa/Lagos')
     for (let id = 2; id <= 22; id++) resources.push({ id, title: `Page resource ${id}`, type: 'article', description: null, url: null, duration_minutes: null })
     await page.getByRole('button', { name: 'Resources', exact: true }).click()
     await page.getByRole('button', { name: 'Next', exact: true }).click()

@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
+import { useRef, useState, useSyncExternalStore } from "react"
 import { LoaderCircle } from "lucide-react"
 import { toast } from "sonner"
 import { api, ApiError, freshNavigation } from "@/lib/provider-api"
@@ -71,6 +71,6 @@ export function LoginForm() {
     </form>
     {mode === "reset" && <div className="mt-5 text-center"><Button type="button" variant="link" disabled={busy || !ready || resend.remaining > 0} onClick={() => void perform("forgot")}>{resend.remaining > 0 ? `Resend code in ${resend.remaining}s` : "Resend code"}</Button><Button type="button" variant="link" disabled={busy} onClick={() => { setMode("forgot"); setError(""); resend.start(0); requestAnimationFrame(() => { emailInput.current?.focus(); emailInput.current?.select() }) }}>Change email</Button></div>}
     <Button type="button" variant="link" disabled={busy || !ready} onClick={() => { setMode(mode === "login" ? "forgot" : "login"); setError("") }} className="mt-5 w-full">{mode === "login" ? "Forgot password?" : "Back to sign in"}</Button>
-    {mode === "login" && <p className="mt-3 text-center text-sm text-muted-foreground">Operations team?{" "}<Link href="/admin/login" className="font-medium text-primary underline underline-offset-4">Admin sign in</Link></p>}
+    {mode === "login" && <p className="mt-4 text-center text-sm text-muted-foreground">New to Cozy? <Link href="/provider/register" className="font-medium text-primary underline underline-offset-4">Create provider account</Link></p>}
   </AuthCard>
 }
