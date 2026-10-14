@@ -1,5 +1,6 @@
 // Isolated contract fixtures. Never connects to the deployed API or real patients.
 import assert from 'node:assert/strict'
+import { reviewThemes } from './theme-design-review.mjs'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
 import { createRequire } from 'node:module'
@@ -189,8 +190,12 @@ try {
     await page.getByLabel('Password', { exact: true }).fill('test-password')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.goto(origin)
+    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await reviewThemes(page, 'provider-root')
     await page.goto(`${origin}/provider`)
     await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await reviewThemes(page, 'provider-alias')
     assert.equal(new URL(page.url()).pathname, '/provider')
     assert.equal(await page.locator('a[href^="/admin"]').count(), 0)
     await page.getByRole('button', { name: 'Shared quiz results', exact: true }).click()
@@ -211,7 +216,7 @@ try {
     await page.getByLabel('Search patients').fill('')
     assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider'))
     await page.getByRole('button', { name: 'Resources', exact: true }).click()
-    await page.getByText('Your resource library is empty.', { exact: false }).waitFor()
+    await page.getByText('Build your resource library', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Add resource' }).click()
     await page.getByLabel('Title', { exact: true }).fill('Test breathing resource')
     await page.getByLabel('Description', { exact: true }).fill('Test instructions')
@@ -306,7 +311,9 @@ try {
     await page.getByRole('heading', { name: 'Updated breathing resource' }).waitFor()
     assert.equal(resources.length, 21)
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.getByRole('button', { name: 'Patients', exact: true }).click()
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Patients', exact: true }).click()
+    await page.getByRole('dialog').waitFor({ state: 'hidden' })
     await page.getByRole('button', { name: 'View patient' }).waitFor()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
     await page.screenshot({ path: '../docs/PD5_MOBILE_VIEW.png', fullPage: true })

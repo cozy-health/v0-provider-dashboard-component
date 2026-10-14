@@ -58,6 +58,9 @@ try {
  const playwright = await import(pathToFileURL(process.env.ADMIN_PLAYWRIGHT_PATH).href)
  browser = await playwright.chromium.launch({ headless: true })
  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }), errors = []
+ // Navigation and route assertions include cold development compilation on CI.
+ page.setDefaultNavigationTimeout(120000)
+ page.setDefaultTimeout(120000)
  page.on('pageerror', e => errors.push(e.message))
  await page.goto(`${origin}/admin/login`)
  await reviewThemes(page, 'admin-login')
@@ -83,7 +86,7 @@ try {
  await reviewThemes(page, 'admin-dashboard')
  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
- assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
+ assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(11, 17, 32)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
    const css = getComputedStyle(el);
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());
@@ -95,7 +98,7 @@ try {
  assert.equal(await page.getByRole('button', { name: 'Switch to light mode' }).count(), 1)
  await page.getByRole('button', { name: 'Switch to light mode' }).click()
  await page.waitForFunction(() => !document.documentElement.classList.contains('dark'))
- assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
+ assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(248, 250, 252)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
    const css = getComputedStyle(el);
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());

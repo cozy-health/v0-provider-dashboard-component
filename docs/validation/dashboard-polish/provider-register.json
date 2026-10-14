@@ -1,0 +1,90 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "theme": "light",
+      "background": "rgb(248, 250, 252)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "background": "rgb(11, 17, 32)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 375,
+      "theme": "light",
+      "background": "rgb(248, 250, 252)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 375,
+      "theme": "dark",
+      "background": "rgb(11, 17, 32)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "background": "rgb(248, 250, 252)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "background": "rgb(11, 17, 32)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 768,
+      "theme": "light",
+      "background": "rgb(248, 250, 252)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 768,
+      "theme": "dark",
+      "background": "rgb(11, 17, 32)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 1024,
+      "theme": "light",
+      "background": "rgb(248, 250, 252)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 1024,
+      "theme": "dark",
+      "background": "rgb(11, 17, 32)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "background": "rgb(248, 250, 252)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "background": "rgb(11, 17, 32)",
+      "overflow": false,
+      "touchTarget": 44
+    }
+  ],
+  "persistence": true,
+  "keyboard": true
+}

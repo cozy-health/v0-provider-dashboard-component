@@ -21,21 +21,21 @@ export function useData<T>(path: string) {
   return { ...state, reload, revalidate }
 }
 
-export function DataList<T>({ path, empty, render, revision = 0, header }: { path: string; empty: string; render: (item: T) => React.ReactNode; revision?: number; header?: (items: T[]) => React.ReactNode }) {
+export function DataList<T>({ path, empty, render, revision = 0, header }: { path: string; empty: React.ReactNode; render: (item: T) => React.ReactNode; revision?: number; header?: (items: T[]) => React.ReactNode }) {
   return <ListPages<T> key={`${path}:${revision}`} path={path} empty={empty} render={render} header={header} />
 }
-function ListPages<T>({ path, empty, render, header }: { path: string; empty: string; render: (item: T) => React.ReactNode; header?: (items: T[]) => React.ReactNode }) {
+function ListPages<T>({ path, empty, render, header }: { path: string; empty: React.ReactNode; render: (item: T) => React.ReactNode; header?: (items: T[]) => React.ReactNode }) {
   const [page, setPage] = useState(1)
   return <PageData<T> key={page} path={path} page={page} setPage={setPage} empty={empty} render={render} header={header} />
 }
-function PageData<T>({ path, page, setPage, empty, render, header }: { path: string; page: number; setPage: (page: number) => void; empty: string; render: (item: T) => React.ReactNode; header?: (items: T[]) => React.ReactNode }) {
+function PageData<T>({ path, page, setPage, empty, render, header }: { path: string; page: number; setPage: (page: number) => void; empty: React.ReactNode; render: (item: T) => React.ReactNode; header?: (items: T[]) => React.ReactNode }) {
   const { data, error, loading, reload } = useData<Page<T>>(`${path}${path.includes("?") ? "&" : "?"}page=${page}&per_page=20`)
   if (loading) return <Loading />
   if (error) return <Failure error={error} retry={reload} />
   return <div className="space-y-4">{data && header?.(data.data)}{!data?.data.length ? <Empty>{empty}</Empty> : <div className="space-y-3">{data.data.map((item, i) => <div key={i}>{render(item)}</div>)}</div>}
-    {data && data.last_page > 1 && <div className="flex items-center justify-between gap-3"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm text-muted-foreground">Page {data.current_page} of {data.last_page} · {data.total} records</span><Button variant="outline" disabled={page >= data.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}
+    {data && data.last_page > 1 && <div className="flex flex-wrap items-center justify-between gap-3"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="order-first w-full text-center text-sm text-muted-foreground sm:order-none sm:w-auto">Page {data.current_page} of {data.last_page} · {data.total} records</span><Button variant="outline" disabled={page >= data.last_page} onClick={() => setPage(page + 1)}>Next</Button></div>}
   </div>
 }
 
 export function date(value?: string | null) { return value ? new Date(value).toLocaleString() : "—" }
-export function Card({ children }: { children: React.ReactNode }) { return <div className="rounded-xl border bg-card p-4 sm:p-6">{children}</div> }
+export function Card({ children }: { children: React.ReactNode }) { return <div className="min-w-0 rounded-xl border bg-card p-4 [overflow-wrap:anywhere] sm:p-6">{children}</div> }
