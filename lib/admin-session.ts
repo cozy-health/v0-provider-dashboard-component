@@ -37,6 +37,14 @@ export function validAdminOrigin(request: Request) {
   return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1" && validCsrf(request)
 }
 export function adminRoute(path: string, method: string) {
-  return method === "GET" && /^(auth\/session|metrics\/(overview|usage|retention|safety))$/.test(path)
-    || method === "POST" && /^auth\/(login|logout)$/.test(path)
+  const catalog = "content/(moods|expressions|triggers|coping|communities|challenges|packages)"
+  if (method === "GET" && path === "subscriptions/history") return true
+  if (method === "GET" && /^community\/(posts|comments|members)$/.test(path)) return true
+  if (method === "PUT" && /^community\/(posts|comments)\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
+  if (method === "DELETE" && /^community\/members\/\d+$/.test(path)) return true
+  if (method === "GET") return /^(auth\/session|metrics\/(overview|usage|retention|safety|insights)|users|quizzes|reports|support|subscriptions|emails|emails\/[a-z-]+\/preview|reports\/\d+\/target)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
+  if (method === "POST") return /^(auth\/(login|logout)|quizzes|quizzes\/\d+\/publish|emails\/test)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
+  if (method === "PUT") return /^(users|quizzes|reports|support)\/\d+$/.test(path) || new RegExp(`^${catalog}/\\d+$`).test(path)
+  if (method === "DELETE") return /^(users|quizzes)\/\d+$/.test(path) || new RegExp(`^${catalog}/\\d+$`).test(path)
+  return false
 }

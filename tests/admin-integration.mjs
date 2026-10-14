@@ -32,6 +32,7 @@ const backend = createServer(async (request, response) => {
   if (path === 'auth/session') return send(200, { role: 'admin' })
   if (path === 'auth/logout') { revoked = true; return send(200, { message: 'Signed out.' }) }
   const metric = path.replace('metrics/', '')
+  if (metric === 'insights') return send(200, { meta, data: { moods: [], triggers: [], coping: [], anxiety: [], helpfulness: [], mood_trends: [], devices: [], enrollments: [], completions: [], subscription_changes: [], daily: [], summary: { new_users: suppressed, active_users: suppressed, community_posts: suppressed, average_intensity: suppressed, pending_reports: suppressed } } })
   seenRange = url.searchParams.get('range')
   const data = metric === 'overview' ? { daily_activity: empty ? [] : [{ date: '2026-09-29', ...available }, { date: '2026-09-28', ...suppressed }], signup_trend: empty ? [] : [{ week: cohort.week, ...suppressed }], retention_summary: empty ? [] : [cohort], operations }
     : metric === 'usage' ? { range: seenRange || '30d', features: empty ? [] : [{ feature: 'mood_entries', ...available }, { feature: 'journal_entries', ...suppressed }], unavailable_features: ['app_opens'] }
@@ -44,11 +45,12 @@ process.env.ADMIN_API_URL = `http://127.0.0.1:${backend.address().port}/api/v1/a
 process.env.PROVIDER_API_URL = `http://127.0.0.1:${backend.address().port}/api/v1/provider/`
 process.env.ADMIN_SESSION_SECRET = randomBytes(32).toString('hex')
 process.env.PROVIDER_SESSION_SECRET = randomBytes(32).toString('hex')
+process.env.NODE_ENV = 'development'
 const app = next({ dev: true, dir: process.cwd() })
 let server, browser, exitCode = 0
 try {
   await app.prepare()
-  server = createServer(app.getRequestHandler()); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  server = createServer(app.getRequestHandler()); server.on('upgrade', app.getUpgradeHandler()); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${server.address().port}`; process.env.ADMIN_DASHBOARD_ORIGIN = origin; process.env.PROVIDER_DASHBOARD_ORIGIN = origin
   const csrfResponse = await fetch(`${origin}/api/csrf`)
   const csrfCookie = csrfResponse.headers.get('set-cookie').split(';')[0]
@@ -100,7 +102,7 @@ try {
   const playwrightPath = process.env.ADMIN_PLAYWRIGHT_PATH || process.env.PROVIDER_PLAYWRIGHT_PATH
   if (!playwrightPath) throw new Error('Set ADMIN_PLAYWRIGHT_PATH for the required browser checks.')
   const playwright = await import(pathToFileURL(playwrightPath).href)
-  browser = await playwright.chromium.launch({ headless: true })
+  browser = await playwright.chromium.launch({ headless: true, ...(process.env.PROVIDER_CHROMIUM_PATH ? { executablePath: process.env.PROVIDER_CHROMIUM_PATH } : {}) })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } }), errors = []
   page.on('pageerror', error => errors.push(error.message))
   page.on('console', message => { if (message.type() === 'error') console.error('Browser console:', message.text()) })
@@ -118,14 +120,16 @@ try {
   assert.match(page.url(), /admin\/login$/)
   await page.screenshot({ path: '../docs/AUTH_ADMIN_LOGIN.png', fullPage: true })
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('heading', { name: 'Dashboard', exact: true }).waitFor()
+  await page.getByRole('link', { name: 'Overview', exact: true }).click()
   await page.getByRole('heading', { name: 'Current service health' }).waitFor()
   assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-admin'))
   assert.ok(!(await page.locator('body').innerText()).includes('fixture-admin-token'))
   await page.screenshot({ path: '../docs/PD7_ADMIN_OVERVIEW.png', fullPage: true })
   await page.getByRole('link', { name: 'Usage', exact: true }).click()
-  await page.getByRole('heading', { name: 'Stored feature records · 30d' }).waitFor()
+  await page.getByRole('heading', { name: /Stored feature records.*30d/ }).waitFor()
   await page.getByLabel('Reporting range').selectOption('7d')
-  await page.getByRole('heading', { name: 'Stored feature records · 7d' }).waitFor(); assert.equal(seenRange, '7d')
+  await page.getByRole('heading', { name: /Stored feature records.*7d/ }).waitFor(); assert.equal(seenRange, '7d')
   await page.getByRole('link', { name: 'Retention', exact: true }).click()
   await page.getByText('Not mature', { exact: true }).waitFor()
   assert.equal(await page.locator('tbody td').filter({ hasText: '<5' }).count(), 1)
@@ -137,8 +141,11 @@ try {
   // Layout validates identity first; service failure must not display metrics.
   await page.reload(); await page.getByRole('heading', { name: 'Admin access could not be checked' }).waitFor()
   availableService = true; await page.getByRole('link', { name: 'Retry', exact: true }).click()
+  await page.getByRole('heading', { name: 'Dashboard', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await page.getByRole('link', { name: 'Overview', exact: true }).click()
   await page.getByRole('heading', { name: 'Current service health' }).waitFor()
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await page.getByRole('button', { name: 'Logout', exact: true }).click()
   await page.getByRole('heading', { name: 'Admin sign in' }).waitFor()
   await page.goto(`${origin}/admin/login?expired=1`)
   await page.getByRole('status').filter({ hasText: 'Your session ended.' }).waitFor()

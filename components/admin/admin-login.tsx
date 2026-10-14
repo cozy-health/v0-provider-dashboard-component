@@ -26,7 +26,7 @@ export function AdminLogin() {
       window.location.replace("/admin")
     } catch (err) { setError((err as Error).message); setBusy(false) }
   }
-  return <AuthCard title="Admin sign in" audience="Operations" description="Sign in to review aggregate usage and safety metrics. Individual patient information stays private.">
+  return <AuthCard title="Admin sign in" audience="Administration" description="Manage Cozy content, accounts, and aggregate wellness analytics.">
     {expired && <p role="status" className="mb-5 rounded-lg bg-muted p-3 text-sm">Your session ended. Sign in again to continue.</p>}
     <form onSubmit={submit} aria-busy={busy} className="space-y-5">
       <fieldset disabled={busy} className="space-y-5">

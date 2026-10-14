@@ -1,0 +1,30 @@
+@font-face { font-family:'Outfit'; src:url('/fonts/Outfit.ttf') format('truetype'); font-weight:100 900; font-display:swap; }
+.cozy-admin {
+ --font-sans:'Outfit',ui-sans-serif,system-ui,sans-serif;
+ font-family:'Outfit',ui-sans-serif,system-ui,sans-serif;
+ background:var(--background); color:var(--foreground);
+}
+.cozy-admin .recharts-cartesian-axis-tick-value { fill:var(--muted-foreground); font-size:11px; }
+.cozy-admin .recharts-cartesian-grid line { stroke:var(--border); }
+.cozy-admin .admin-icon {
+ display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+ width:42px; height:42px; border-radius:14px; border:1px solid currentColor;
+ background:var(--card);
+}
+.cozy-admin .admin-icon-small { width:30px; height:30px; border-radius:10px; }
+.cozy-admin .admin-tone-blue { color:var(--cozy-blue); }
+.cozy-admin .admin-tone-green { color:var(--cozy-green); }
+.cozy-admin .admin-tone-orange { color:var(--cozy-orange); }
+.cozy-admin .admin-tone-yellow { color:var(--cozy-yellow); }
+.cozy-admin .admin-nav-link[aria-current="page"] .admin-icon {
+ background:transparent; color:var(--primary-foreground); border-color:transparent;
+}
+.cozy-admin .admin-nav-link { transition:background-color .15s ease; }
+.cozy-admin .admin-panel { box-shadow:0 3px 12px rgb(0 0 0 / .025); }
+.cozy-admin button { border-radius:12px; }
+.cozy-admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.cozy-admin textarea, .cozy-admin select { border-radius:12px; }
+.cozy-admin tbody tr:hover { background:var(--muted); }
+@media (prefers-reduced-motion:reduce) {
+ .cozy-admin .admin-nav-link { transition:none; }
+}

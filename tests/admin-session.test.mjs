@@ -19,11 +19,15 @@ test('admin cookie encryption is isolated from provider even if keys coincide', 
   assert.equal(openAdmin(bytes.toString('base64url')), null)
   assert.equal(openAdmin(sealAdmin({ ...session, expires: 0 })), null)
 })
-test('admin routes exclude all individual-data and write endpoints', () => {
+test('admin routes exclude unrelated APIs and unauthorized methods', () => {
   assert.ok(adminRoute('metrics/overview', 'GET'))
   for (const path of ['clients', 'me', 'settings', 'metrics/analytics', '../provider/clients']) assert.equal(adminRoute(path, 'GET'), false)
   assert.equal(adminRoute('metrics/safety', 'POST'), false)
   assert.equal(adminRoute('auth/register', 'POST'), false)
+})
+test('management routes permit only the implemented resource methods and identifiers', () => {
+  for (const [path, method] of [['users', 'GET'], ['users/12', 'PUT'], ['content/moods', 'POST'], ['content/coping/3', 'DELETE'], ['quizzes/8/publish', 'POST'], ['emails/welcome/preview', 'GET'], ['subscriptions/history', 'GET']]) assert.equal(adminRoute(path, method), true)
+  for (const [path, method] of [['users', 'POST'], ['content/unknown', 'GET'], ['content/moods/../users', 'PUT'], ['quizzes/1/publish', 'DELETE'], ['settings/test', 'PUT'], ['community/posts/not-a-uuid', 'PUT']]) assert.equal(adminRoute(path, method), false)
 })
 test('admin CSRF requires exact origin and explicit header', () => {
   const token = csrfToken()

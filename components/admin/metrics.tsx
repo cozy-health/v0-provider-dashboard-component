@@ -1,6 +1,8 @@
 "use client"
 import { useEffect, useState } from "react"
 import { adminApi, Cell, Cohort, MetricResponse } from "@/lib/admin-api"
+import { AdminIcon, moduleVisuals } from "./admin-visuals"
+import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MetricCell, RetentionCell } from "./metric-display"
 
@@ -14,7 +16,7 @@ const featureLabels: Record<string, string> = { mood_entries: "Mood entries", jo
 
 export function MetricsPage({ metric }: { metric: Metric }) {
   const [range, setRange] = useState("30d"), [revision, setRevision] = useState(0)
-  return <section><div className="flex flex-wrap gap-4 items-center justify-between mb-6"><h1 className="text-3xl font-semibold">{titles[metric]}</h1>{metric === "usage" && <label className="text-sm">Reporting range<select aria-label="Reporting range" value={range} onChange={event => setRange(event.target.value)} className="ml-3 border rounded-md bg-background p-2">{["7d", "30d", "90d"].map(value => <option key={value}>{value}</option>)}</select></label>}</div><MetricData key={`${metric}:${range}:${revision}`} metric={metric} range={range} retry={() => setRevision(n => n + 1)} /></section>
+  return <section><div className="flex flex-wrap gap-4 items-center justify-between mb-6"><div className="flex items-center gap-3"><AdminIcon visual={moduleVisuals[metric]} /><h1 className="text-3xl font-semibold tracking-tight">{titles[metric]}</h1></div>{metric === "usage" && <label className="text-sm">Reporting range<select aria-label="Reporting range" value={range} onChange={event => setRange(event.target.value)} className="ml-3 border rounded-md bg-background p-2">{["7d", "30d", "90d"].map(value => <option key={value}>{value}</option>)}</select></label>}</div><MetricData key={`${metric}:${range}:${revision}`} metric={metric} range={range} retry={() => setRevision(n => n + 1)} /></section>
 }
 function MetricData({ metric, range, retry }: { metric: Metric; range: string; retry: () => void }) {
   const [state, setState] = useState<{ data?: MetricResponse<Overview | Usage | Cohort[] | Safety>; error?: string }>({})
@@ -25,7 +27,7 @@ function MetricData({ metric, range, retry }: { metric: Metric; range: string; r
       .catch(error => { if (!controller.signal.aborted) setState({ error: error.message }) })
     return () => controller.abort()
   }, [metric, range])
-  if (state.error) return <div role="alert" className="rounded-xl border p-6"><p className="text-destructive mb-4">{state.error}</p><Button variant="outline" onClick={retry}>Try again</Button></div>
+  if (state.error) return <div role="alert" className="rounded-xl border p-6"><p className="text-destructive mb-4">{state.error}</p><Button variant="outline" onClick={retry}><RefreshCw aria-hidden="true" className="size-4" />Try again</Button></div>
   if (!state.data) return <div role="status" className="animate-pulse space-y-3"><p>Loading aggregate metrics…</p><div className="h-24 rounded-lg bg-muted" /><div className="h-48 rounded-lg bg-muted" /></div>
   const { meta, data } = state.data
   return <div className="space-y-6"><aside className="rounded-xl border bg-muted/30 p-4 text-sm"><p>Monthly release: <strong>{meta.release}</strong> · {meta.timezone}</p><p className="mt-1 text-muted-foreground">Window {meta.window.from} through {meta.window.to_exclusive} (end excluded). {meta.precision}</p><p className="mt-2 text-xs text-muted-foreground">{meta.activity_definition}</p><p className="mt-2 text-xs text-muted-foreground">&lt;5 means privacy suppression, including related groups. It does not mean zero. Refreshing preserves the published release.</p></aside>

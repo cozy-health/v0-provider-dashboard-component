@@ -11,7 +11,10 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   const path = (await context.params).path.join("/"), method = request.method
   if (method !== "GET" && !validAdminOrigin(request)) return error("Request origin could not be verified.", 403)
   if (!adminRoute(path, method)) return error("Page not found.", 404)
-  if ([...request.nextUrl.searchParams.keys()].some(key => path !== "metrics/usage" || key !== "range")) return error("Only fixed reporting ranges are supported.", 422)
+  const metric = path.startsWith("metrics/")
+  const list = /^(users|quizzes|reports|support|subscriptions(?:\/history)?|emails|content\/[a-z]+|community\/(posts|comments|members))$/.test(path)
+  const allowed = ["metrics/usage", "metrics/insights"].includes(path) ? ["range"] : list && method === "GET" ? ["search", "page", "per_page", ...(path.startsWith("community/") ? ["group_id"] : [])] : []
+  if ([...request.nextUrl.searchParams.keys()].some(key => !allowed.includes(key))) return error(metric ? "Only fixed reporting ranges are supported." : "Unsupported filter.", 422)
   const range = request.nextUrl.searchParams.get("range")
   if (range && !["7d", "30d", "90d"].includes(range)) return error("Choose 7d, 30d or 90d.", 422)
   const login = path === "auth/login", logout = path === "auth/logout"
@@ -19,29 +22,35 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   if (!login && !session) return clear(error("Your admin session expired. Please sign in again.", 401))
   try {
     let body: string | undefined
-    if (method === "POST") {
+    if (!["GET", "HEAD"].includes(method)) {
       if (!request.headers.get("content-type")?.startsWith("application/json")) return error("JSON is required.", 415)
       const reader = request.body?.getReader(), chunks: Uint8Array[] = []; let size = 0
       try {
         if (reader) for (;;) {
           const { done, value } = await reader.read(); if (done) break
           size += value.byteLength
-          if (size > 8192) { await reader.cancel(); return error("Request is too large.", 413) }
+          if (size > (login ? 8192 : 262144)) { await reader.cancel(); return error("Request is too large.", 413) }
           chunks.push(value)
         }
       } finally { reader?.releaseLock() }
       let data
       try { data = JSON.parse(Buffer.concat(chunks).toString("utf8")) } catch { return error("Invalid request.", 400) }
-      if (login) { sealAdmin({ token: "configuration-check", expires: 0 }); body = JSON.stringify({ email: data.email, password: data.password }) }
-      else body = "{}"
+      if (!data || typeof data !== "object" || Array.isArray(data)) return error("A JSON object is required.", 400)
+      if (login) { sealAdmin({ token: "configuration-check", expires: 0 }); body = JSON.stringify({ email: data.email, password: data.password, session_mode: "management-v1" }) }
+      else body = logout ? "{}" : JSON.stringify(data)
     }
-    const target = new URL(path, adminBase()); if (range) target.searchParams.set("range", range)
+    const target = new URL(path, adminBase()); request.nextUrl.searchParams.forEach((value, key) => target.searchParams.set(key, value))
     const result = await fetch(target, { method, body, headers: { Accept: "application/json", "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.token}` } : {}) }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60000) })
     if (logout && (result.ok || [401, 403].includes(result.status))) return clear(NextResponse.json({ message: "Signed out." }, { headers }))
     if (!result.ok) {
-      const message = login && result.status === 422 ? "Email or password was not accepted for an admin account." : result.status === 429 ? "Too many attempts. Please wait and retry." : [401, 403].includes(result.status) ? "Admin access is unavailable. Please sign in again." : "Admin analytics is temporarily unavailable. Please retry."
+      if (result.status === 422 && !login) {
+        const validation = await result.json().catch(() => ({}))
+        const errors = Object.fromEntries(Object.entries(validation.errors ?? {}).filter(([key, value]) => /^[a-zA-Z0-9_.]+$/.test(key) && Array.isArray(value) && value.every(item => typeof item === "string")))
+        return NextResponse.json({ message: "Check the submitted fields.", errors }, { status: 422, headers })
+      }
+      const message = login && result.status === 422 ? "Email or password was not accepted for an admin account." : result.status === 429 ? "Too many attempts. Please wait and retry." : result.status === 409 ? "This record has changed. Reload it and retry." : result.status === 403 ? "This action requires an authorized admin session." : result.status === 401 ? "Admin access is unavailable. Please sign in again." : "Admin service is temporarily unavailable. Please retry."
       const response = error(message, result.status)
-      return !login && [401, 403].includes(result.status) ? clear(response) : response
+      return !login && (result.status === 401 || result.status === 403 && (metric || path === "auth/session")) ? clear(response) : response
     }
     const data = await result.json()
     if (login) {
@@ -54,4 +63,4 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     return NextResponse.json(data, { headers })
   } catch { return error("Admin analytics is temporarily unavailable. Please retry.", 503) }
 }
-export { handle as GET, handle as POST }
+export { handle as GET, handle as POST, handle as PUT, handle as DELETE }

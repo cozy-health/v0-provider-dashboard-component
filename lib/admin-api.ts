@@ -7,8 +7,8 @@ export async function adminApi<T>(path: string, options: RequestInit = {}): Prom
   const response = await fetch(`/api/admin/${path}`, { ...options, cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-Cozy-Request": "1", ...options.headers, ...await mutationHeaders(options.method) } })
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
-    if ([401, 403].includes(response.status) && path !== "auth/login") window.location.replace("/admin/login?expired=1")
-    throw new Error(data.message || "Admin analytics could not be loaded.")
+    if ((response.status === 401 || response.status === 403 && path.startsWith("metrics/")) && path !== "auth/login") window.location.replace("/admin/login?expired=1")
+    throw new Error(data.errors ? Object.entries(data.errors).map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(" ") : "Invalid value"}`).join("\n") : data.message || "Admin data could not be loaded.")
   }
   return data
 }

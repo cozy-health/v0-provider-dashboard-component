@@ -1,2 +1,2 @@
-import { MetricsPage } from "@/components/admin/metrics"
-export default function Page() { return <MetricsPage metric="overview" /> }
+import { InsightsDashboard } from "@/components/admin/insights-dashboard"
+export default function Page() { return <InsightsDashboard /> }
