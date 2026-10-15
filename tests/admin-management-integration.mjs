@@ -86,7 +86,7 @@ try {
  await reviewThemes(page, 'admin-dashboard')
  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
- assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(11, 17, 32)')
+ assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
    const css = getComputedStyle(el);
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());

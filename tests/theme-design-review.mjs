@@ -29,7 +29,7 @@ export async function reviewThemes(page, name) {
       if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) console.log('OVERFLOW', name, JSON.stringify(overflowing))
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name} overflow at ${width} in ${theme}`)
       const background = await page.locator('body').evaluate(el => getComputedStyle(el).backgroundColor)
-      assert.equal(background, theme === 'dark' ? 'rgb(11, 17, 32)' : 'rgb(248, 250, 252)')
+      assert.equal(background, theme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(248, 250, 252)')
 
       results.push({ width, theme, background, overflow: false, touchTarget: bounds.width })
     }

@@ -6,6 +6,7 @@
 }
 .cozy-admin .recharts-cartesian-axis-tick-value { fill:var(--muted-foreground); font-size:11px; }
 .cozy-admin .recharts-cartesian-grid line { stroke:var(--border); }
+.dark .cozy-admin[data-slot="sheet-content"] { background:var(--card); }
 .cozy-admin .recharts-responsive-container { overflow:clip; }
 .cozy-admin .recharts-default-tooltip { max-width:min(16rem,calc(100vw - 6rem)); overflow-wrap:anywhere; }
 .cozy-admin .admin-icon {

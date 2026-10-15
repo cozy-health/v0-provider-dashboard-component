@@ -86,7 +86,7 @@ try {
  await page.getByRole('alert').getByText('Passwords must match.').waitFor()
  assert.equal(registrations, 0)
  await mkdir('../docs/validation/provider-onboarding', { recursive: true })
- for (const [theme, background] of [['dark', 'rgb(11, 17, 32)'], ['light', 'rgb(248, 250, 252)']]) {
+ for (const [theme, background] of [['dark', 'rgb(0, 0, 0)'], ['light', 'rgb(248, 250, 252)']]) {
   await page.emulateMedia({ colorScheme: theme })
   await page.waitForFunction(dark => document.documentElement.classList.contains('dark') === dark, theme === 'dark')
   assert.equal(await page.locator('main').evaluate(el => getComputedStyle(el).backgroundColor), background)
@@ -134,8 +134,8 @@ try {
  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
  await page.emulateMedia({ colorScheme: 'dark' })
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
- await page.waitForFunction(() => getComputedStyle(document.querySelector('[role="dialog"]')).backgroundColor === 'rgb(11, 17, 32)')
- assert.equal(await page.getByRole('dialog').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(11, 17, 32)')
+ await page.waitForFunction(() => getComputedStyle(document.querySelector('[role="dialog"]')).backgroundColor === 'rgb(0, 0, 0)')
+ assert.equal(await page.getByRole('dialog').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
  await page.screenshot({ path: '../docs/validation/provider-onboarding/connection-mobile-dark.png', fullPage: true })
  assert.deepEqual(errors, [])
  console.log('PASS provider onboarding: independent registration, secure cookie, empty roster, invitation preview, acknowledgements, changed consent, connection, replay error, mobile layout, and no runtime errors.')
