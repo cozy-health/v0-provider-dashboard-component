@@ -1,3 +1,7 @@
+# Local overview and analytics redesign
+
+The latest local-first redesign supersedes the older dashboard layout and decorative icon policy below. See [local preview and verification](ADMIN_LOCAL_PREVIEW.md) for setup, data semantics, and current behavior, and [review safety fixes](ADMIN_REVIEW_SAFETY.md) for read-only users, moderation safeguards and the latest API contract. Hosted rollout is deferred until local review.
+
 # Cozy admin dashboard implementation
 
 The six approved phases are implemented in the dashboard, Laravel API, and mobile workspace. Production deployment and production database migrations have not been performed.
@@ -17,7 +21,7 @@ The six approved phases are implemented in the dashboard, Laravel API, and mobil
 
 - Analytics use frozen monthly releases ending at the first UTC day of the current month. Filters select the preceding 7, 30, or 90 days; they do not display live current-month wellness activity.
 - Counts are rounded down to multiples of five. Small contributor groups and related breakdowns are withheld. Unknown/free-text trigger labels, notes, journal bodies and quiz answers are never read into these reports.
-- User Triggers and User Coping Mechanisms remain aggregate views. The Users module exposes basic account administration rather than wellness histories.
+- User Triggers and User Coping Mechanisms remain aggregate views. The Users module exposes read-only basic account details rather than wellness histories; admins cannot edit, deactivate or delete accounts.
 - Average intensity is strength of feeling, not a positive mood score. Device distribution counts eligible registered devices, not distinct people.
 - Pending-report counts refer to retained support and community reports in the selected release window. Queue management pages show current operational records.
 - Sales, emergency calls and completed mindfulness sessions remain unavailable without verified sources. Purchasing and refunds remain deferred.

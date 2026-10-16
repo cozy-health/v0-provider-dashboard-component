@@ -1,2 +1,2 @@
-import { MetricsPage } from "@/components/admin/metrics"
-export default function Page() { return <MetricsPage metric="overview" /> }
+import { redirect } from "next/navigation"
+export default function Page() { redirect("/admin") }

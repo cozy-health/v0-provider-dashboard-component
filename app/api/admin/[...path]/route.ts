@@ -13,7 +13,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   if (!adminRoute(path, method)) return error("Page not found.", 404)
   const metric = path.startsWith("metrics/")
   const list = /^(users|quizzes|reports|support|subscriptions(?:\/history)?|emails|content\/[a-z]+|community\/(posts|comments|members))$/.test(path)
-  const allowed = ["metrics/usage", "metrics/insights"].includes(path) ? ["range"] : list && method === "GET" ? ["search", "page", "per_page", ...(path.startsWith("community/") ? ["group_id"] : [])] : []
+  const allowed = ["metrics/usage", "metrics/insights"].includes(path) ? ["range"] : list && method === "GET" ? ["search", "page", "per_page", ...(["reports", "support"].includes(path) ? ["status", ...(path === "reports" ? ["overdue"] : [])] : []), ...(path.startsWith("community/") ? ["group_id"] : [])] : []
   if ([...request.nextUrl.searchParams.keys()].some(key => !allowed.includes(key))) return error(metric ? "Only fixed reporting ranges are supported." : "Unsupported filter.", 422)
   const range = request.nextUrl.searchParams.get("range")
   if (range && !["7d", "30d", "90d"].includes(range)) return error("Choose 7d, 30d or 90d.", 422)
@@ -48,7 +48,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
         const errors = Object.fromEntries(Object.entries(validation.errors ?? {}).filter(([key, value]) => /^[a-zA-Z0-9_.]+$/.test(key) && Array.isArray(value) && value.every(item => typeof item === "string")))
         return NextResponse.json({ message: "Check the submitted fields.", errors }, { status: 422, headers })
       }
-      const message = login && result.status === 422 ? "Email or password was not accepted for an admin account." : result.status === 429 ? "Too many attempts. Please wait and retry." : result.status === 409 ? "This record has changed. Reload it and retry." : result.status === 403 ? "This action requires an authorized admin session." : result.status === 401 ? "Admin access is unavailable. Please sign in again." : "Admin service is temporarily unavailable. Please retry."
+      const message = login && result.status === 422 ? "Email or password was not accepted for an admin account." : result.status === 429 ? "Too many attempts. Please wait and retry." : result.status === 404 && /^(reports|support)\/\d+$/.test(path) ? "This record is no longer available." : result.status === 409 ? "This record has changed. Reload it and retry." : result.status === 403 ? "This action requires an authorized admin session." : result.status === 401 ? "Admin access is unavailable. Please sign in again." : "Admin service is temporarily unavailable. Please retry."
       const response = error(message, result.status)
       return !login && (result.status === 401 || result.status === 403 && (metric || path === "auth/session")) ? clear(response) : response
     }

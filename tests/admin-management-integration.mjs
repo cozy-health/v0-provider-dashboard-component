@@ -18,7 +18,8 @@ const backend = createServer(async (request, response) => {
  const body = raw ? JSON.parse(raw) : {}
  if (path === 'auth/login') { assert.equal(body.session_mode, 'management-v1'); return send(200, { token: 'local-management-fixture', expires_at: new Date(Date.now() + 1800000).toISOString() }) }
  if (request.headers.authorization !== 'Bearer local-management-fixture') return send(401, {})
- if (path === 'auth/session') return send(200, { role: 'admin', name: 'Test Operator', capabilities: ['admin:metrics', 'admin:content', 'admin:users', 'admin:email', 'admin:moderation', 'admin:subscriptions'] })
+ if (path === 'operations/summary') return send(200, { data: { checked_at: '2026-10-01T12:00:00Z', totals: {}, attention: [], activity: [] } })
+  if (path === 'auth/session') return send(200, { role: 'admin', name: 'Test Operator', capabilities: ['admin:metrics', 'admin:content', 'admin:users', 'admin:email', 'admin:moderation', 'admin:subscriptions'] })
  if (path === 'auth/logout') return send(200, {})
  if (forbidden && path === 'users') return send(403, {})
  if (path === 'metrics/insights') {
@@ -68,9 +69,9 @@ try {
  await page.getByLabel('Email', { exact: true }).fill('operator@example.test')
  await page.getByLabel('Password', { exact: true }).fill('fixture-only')
  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
- await page.getByRole('heading', { name: 'User growth · daily registrations' }).waitFor()
+ await page.getByRole('heading', { name: 'User registrations' }).waitFor()
  await page.getByText('Hi, Test Operator', { exact: true }).waitFor()
- assert.ok(await page.locator('.recharts-wrapper').count() >= 6)
+ assert.ok(await page.locator('.recharts-wrapper').count() >= 2)
  const navigation = page.getByRole('navigation', { name: 'Admin navigation' })
  for (const group of ['Overview', 'People & Wellness', 'Community', 'Operations']) {
    assert.ok(await navigation.getByText(group, { exact: true }).count() >= 1)
@@ -80,8 +81,8 @@ try {
  for (const label of ['Users', 'Cozy Moods', 'Mood Triggers', 'Cozy Quizzes', 'Email Triggers']) {
    assert.equal(await navigation.getByRole('link', { name: label, exact: true }).locator('.admin-icon[aria-hidden="true"]').count(), 1)
  }
- await navigation.getByRole('link', { name: 'Dashboard', exact: true }).focus()
- assert.equal(await navigation.getByRole('link', { name: 'Dashboard', exact: true }).evaluate(el => el === document.activeElement), true)
+ await navigation.getByRole('link', { name: 'Overview', exact: true }).focus()
+ assert.equal(await navigation.getByRole('link', { name: 'Overview', exact: true }).evaluate(el => el === document.activeElement), true)
 
  await reviewThemes(page, 'admin-dashboard')
  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
@@ -94,18 +95,18 @@ try {
 
  await mkdir('../docs/validation/admin-phases', { recursive: true })
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-dark.png', fullPage: true })
- await page.reload(); await page.getByRole('heading', { name: 'User growth · daily registrations' }).waitFor()
+ await page.reload(); await page.getByRole('heading', { name: 'User registrations' }).waitFor()
  assert.equal(await page.getByRole('button', { name: 'Switch to light mode' }).count(), 1)
  await page.getByRole('button', { name: 'Switch to light mode' }).click()
  await page.waitForFunction(() => !document.documentElement.classList.contains('dark'))
- assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(248, 250, 252)')
+ assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
    const css = getComputedStyle(el);
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());
  }), ['#0460d8', '#00bc4c', '#f25c05', '#f2cb05', '#0460d8', '#0460d8', '#00bc4c', '#f25c05', '#f2cb05'])
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-light.png', fullPage: true })
  await page.getByLabel('Reporting period').selectOption('7d')
- await page.getByRole('heading', { name: 'User growth · daily registrations' }).waitFor()
+ await page.getByRole('heading', { name: 'User registrations' }).waitFor()
  assert.equal(seenRange, '7d')
  await page.getByRole('link', { name: 'Cozy Coping Mechanisms', exact: true }).click()
  await page.getByText('There are no records to display', { exact: true }).waitFor()
@@ -141,15 +142,16 @@ try {
  forbidden = false
  await page.setViewportSize({ width: 390, height: 844 })
  await page.goto(`${origin}/admin`)
- await page.getByRole('heading', { name: 'User growth · daily registrations' }).waitFor()
+ await page.getByRole('heading', { name: 'User registrations' }).waitFor()
  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
  await page.screenshot({ path: '../docs/validation/admin-phases/navigation-mobile.png', fullPage: true })
  await page.keyboard.press('Escape')
  assert.equal(await page.getByRole('button', { name: 'Open navigation', exact: true }).getAttribute('aria-expanded'), 'false')
  await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
- await page.getByRole('link', { name: 'Datacenter', exact: true }).click()
- await page.getByRole('heading', { name: 'Mental Health Insights Dashboard', exact: true }).waitFor()
+ await page.getByRole('link', { name: 'Analytics', exact: true }).click()
+ await page.getByRole('heading', { name: 'Analytics', exact: true }).waitFor()
  await reviewThemes(page, 'admin-insights')
+ await page.getByRole('tab', { name: 'Wellness', exact: true }).click()
  await page.getByRole('heading', { name: 'Reported coping helpfulness' }).waitFor()
  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-mobile.png', fullPage: true })

@@ -21,9 +21,10 @@ const panelVisuals: Record<string, Visual> = {
 export function panelVisual(title: string): Visual { return panelVisuals[title] ?? { icon: Sparkles, tone: "blue" } }
 export function AdminIcon({ visual, small = false }: { visual: Visual; small?: boolean }) {
  const Icon = visual.icon
+ if (!small) return null
  return <span aria-hidden="true" className={`admin-icon admin-tone-${visual.tone} ${small ? "admin-icon-small" : ""}`}><Icon className={small ? "size-4" : "size-5"} strokeWidth={1.8} /></span>
 }
 export const moduleDescriptions: Record<string, string> = {
- users: "Look after the people who make Cozy a community.", moods: "Make room for every feeling with thoughtful mood options.", expressions: "Help people put their feelings into words.", triggers: "Organize the moments and experiences that shape feelings.", coping: "Build a collection of supportive ways to feel better.",
+ users: "View account details for the people who make Cozy a community. User accounts are read-only.", moods: "Make room for every feeling with thoughtful mood options.", expressions: "Help people put their feelings into words.", triggers: "Organize the moments and experiences that shape feelings.", coping: "Build a collection of supportive ways to feel better.",
  communities: "Create welcoming spaces for connection and support.", challenges: "Encourage small steps toward everyday wellbeing.", quizzes: "Create and review quizzes that support self-reflection.", packages: "Keep your wellness packages clear and up to date.", subscriptions: "Review recorded subscriptions and their status.", emails: "Review transactional emails and check delivery activity.", reports: "Review community concerns with care.", support: "Help people get the support they need.", posts: "Care for the conversations happening across Cozy.", comments: "Review replies and keep conversations welcoming.", members: "Review the people connected to each community.", "subscription-events": "Follow the recorded changes to subscriptions.",
 }

@@ -13,7 +13,7 @@ import { adminModules } from "@/lib/admin-modules"
 import "./admin-theme.css"
 import { AdminIcon, moduleVisuals } from "./admin-visuals"
 const groups = [
- { label: "Overview", items: [["/admin", "Dashboard"], ["/admin/datacenter", "Datacenter"], ["/admin/overview", "Overview"], ["/admin/usage", "Usage"], ["/admin/retention", "Retention"], ["/admin/safety", "Safety"]] },
+ { label: "Overview", items: [["/admin", "Overview"], ["/admin/datacenter", "Analytics"], ["/admin/safety", "Safety"]] },
  { label: "People & Wellness", items: adminModules.filter(([key]) => ["users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
  { label: "Community", items: adminModules.filter(([key]) => ["communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
  { label: "Operations", items: adminModules.filter(([key]) => ["packages", "subscriptions", "subscription-events", "emails", "support"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },

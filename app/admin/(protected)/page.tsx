@@ -1,2 +1,2 @@
-import { InsightsDashboard } from "@/components/admin/insights-dashboard"
-export default function Page() { return <InsightsDashboard /> }
+import { AdminWorkspace } from "@/components/admin/admin-workspace"
+export default function Page() { return <AdminWorkspace /> }
