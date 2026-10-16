@@ -5,7 +5,7 @@ export async function reviewThemes(page, name) {
   await page.getByRole('button', { name: /Switch to (light|dark) mode/ }).filter({ visible: true }).waitFor()
   // Hide Next's development status badge only; it is absent from production.
   await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
-  const directory = 'docs/validation/theme-review'
+  const directory = process.env.COZY_INTEGRATION_FIXTURE ? 'scratch/theme-review' : 'docs/validation/theme-review'
   await mkdir(directory, { recursive: true })
   const original = page.viewportSize()
   const results = []

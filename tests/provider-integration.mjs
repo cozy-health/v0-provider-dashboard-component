@@ -3,12 +3,10 @@ import assert from 'node:assert/strict'
 import { reviewThemes } from './theme-design-review.mjs'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
-import { createRequire } from 'node:module'
+import { createIsolatedTestApp } from './isolated-next-app.mjs'
 import { pathToFileURL } from 'node:url'
 import { sealSession, SESSION_COOKIE } from '../lib/provider-session.ts'
 
-const require = createRequire(import.meta.url)
-const next = require('next')
 const calls = []
 const provider = { id: 1, name: 'Test Provider', email: 'provider@example.test', practice: 'Test Practice', timezone: 'UTC', is_verified: true }
 let consent = { moods: true, journals: true, quizzes: true, notes: true }
@@ -105,7 +103,7 @@ const backendPort = backend.address().port
 process.env.NODE_ENV = 'development'
 process.env.PROVIDER_API_URL = `http://127.0.0.1:${backendPort}/api/v1/provider/`
 process.env.PROVIDER_SESSION_SECRET = randomBytes(32).toString('hex')
-const app = next({ dev: true, hostname: '127.0.0.1' })
+const app = await createIsolatedTestApp('provider-contract')
 let server, browser
 const sockets = new Set()
 let exitCode = 0

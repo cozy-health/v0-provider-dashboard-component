@@ -3,11 +3,10 @@ import { reviewThemes } from './theme-design-review.mjs'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
-import { createRequire } from 'node:module'
+import { createIsolatedTestApp } from './isolated-next-app.mjs'
 import { pathToFileURL } from 'node:url'
 import { mkdir } from 'node:fs/promises'
 
-const next = createRequire(import.meta.url)('next')
 const provider = { id: 1, name: 'Avery Taylor', email: 'avery@example.test', practice: null, is_verified: false }
 const flags = { moods: true, journals: false, quizzes: false, notes: true }
 let patients = [], changed = false, codeUsed = false, registrations = 0, confirmations = 0
@@ -50,7 +49,7 @@ await new Promise(resolve => backend.listen(0, '127.0.0.1', resolve))
 process.env.NODE_ENV = 'development'
 process.env.PROVIDER_API_URL = `http://127.0.0.1:${backend.address().port}/api/v1/provider/`
 process.env.PROVIDER_SESSION_SECRET = randomBytes(32).toString('hex')
-const app = next({ dev: true, dir: process.cwd() })
+const app = await createIsolatedTestApp('provider-onboarding')
 let server, browser, exitCode = 0
 try {
  await app.prepare()

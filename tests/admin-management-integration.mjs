@@ -3,10 +3,9 @@ import { reviewThemes } from './theme-design-review.mjs'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
-import { createRequire } from 'node:module'
+import { createIsolatedTestApp } from './isolated-next-app.mjs'
 import { pathToFileURL } from 'node:url'
 import { mkdir } from 'node:fs/promises'
-const require = createRequire(import.meta.url), next = require('next')
 const cell = { status: 'available', count: 15 }
 const meta = { release: '2026-10-01', timezone: 'UTC', precision: 'Counts rounded down to multiples of five.', window: { from: '2026-07-03', to_exclusive: '2026-10-01' } }
 let coping = [], quizzes = [], seenRange = '', forbidden = false
@@ -48,7 +47,7 @@ await new Promise(resolve => backend.listen(0, '127.0.0.1', resolve))
 process.env.ADMIN_API_URL = `http://127.0.0.1:${backend.address().port}/api/v1/admin/`
 process.env.ADMIN_SESSION_SECRET = randomBytes(32).toString('hex')
 process.env.NODE_ENV = 'development'
-const app = next({ dev: true, dir: process.cwd() })
+const app = await createIsolatedTestApp('admin-management')
 let server, browser, exitCode = 0
 try {
  await app.prepare()
@@ -105,7 +104,12 @@ try {
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());
  }), ['#0460d8', '#00bc4c', '#f25c05', '#f2cb05', '#0460d8', '#0460d8', '#00bc4c', '#f25c05', '#f2cb05'])
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-light.png', fullPage: true })
+ const rangeResponse = page.waitForResponse(response => {
+  const url = new URL(response.url())
+  return url.pathname === '/api/admin/metrics/insights' && url.searchParams.get('range') === '7d' && response.status() === 200
+ })
  await page.getByLabel('Reporting period').selectOption('7d')
+ await rangeResponse
  await page.getByRole('heading', { name: 'User registrations' }).waitFor()
  assert.equal(seenRange, '7d')
  await page.getByRole('link', { name: 'Cozy Coping Mechanisms', exact: true }).click()
