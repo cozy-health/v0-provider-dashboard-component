@@ -7,6 +7,16 @@ import { sealSession, openSession, allowedRoute, validOrigin, apiBase } from '..
 process.env.PROVIDER_SESSION_SECRET = randomBytes(32).toString('hex')
 process.env.PROVIDER_DASHBOARD_ORIGIN = 'https://dashboard.example.test'
 
+test('messaging bridge permits only conversation reads, sends and read markers', () => {
+  assert.equal(allowedRoute('conversations', 'GET'), true)
+  assert.equal(allowedRoute('conversations/12/messages', 'GET'), true)
+  assert.equal(allowedRoute('conversations/12/messages', 'POST'), true)
+  assert.equal(allowedRoute('conversations/12/read', 'POST'), true)
+  assert.equal(allowedRoute('conversations/12/messages', 'DELETE'), false)
+  assert.equal(allowedRoute('conversations/12/records', 'GET'), false)
+  assert.equal(allowedRoute('provider-conversations', 'GET'), false)
+})
+
 test('session encrypts credentials, authenticates ciphertext and enforces expiry', () => {
   const session = { token: 'private-provider-token', expires: Date.now() + 60000 }
   const cookie = sealSession(session)

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
-import { Users, BookOpen, FileText, Settings, Shield, LogOut, Menu, UserRoundPlus } from "lucide-react"
+import { MessageCircle, Users, BookOpen, FileText, Settings, Shield, LogOut, Menu, UserRoundPlus } from "lucide-react"
 import { toast } from "sonner"
 import { api, Client, Provider, freshNavigation } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { useDesktopNavigation } from "@/hooks/use-desktop-navigation"
 import { QuizInbox } from "./quiz-inbox"
 
-const navigation = [{ name: "Patients", icon: Users }, { name: "Shared quiz results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
+import { Messages } from "./messages"
+
+const navigation = [{ name: "Messages", icon: MessageCircle }, { name: "Patients", icon: Users }, { name: "Shared quiz results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
 export function ProviderDashboard({ expires }: { expires: number }) {
   const [open, setOpen] = useState(false)
   const closeNavigation = useCallback(() => setOpen(false), [])
@@ -54,9 +56,11 @@ export function ProviderDashboard({ expires }: { expires: number }) {
     </aside>
     <main className="min-w-0 flex-1 max-w-7xl p-4 pb-12 sm:p-6 lg:p-8">
       {provider && <ConsentNotice key={provider.id} ownerId={provider.id} />}
-      <header className="mb-8"><p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cozy Health · Provider portal</p><h1 className="break-words text-2xl font-semibold sm:text-3xl">{patient ? "Patient overview" : view}</h1><p className="mt-2 text-sm text-muted-foreground">Patient sharing choices control the information available here.</p></header>
+      <header className="mb-8"><p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cozy Health · Provider portal</p><h1 className="break-words text-2xl font-semibold sm:text-3xl">{view === "Patient messages" ? "Messages" : patient ? "Patient overview" : view}</h1><p className="mt-2 text-sm text-muted-foreground">Patient sharing choices control the information available here.</p></header>
       {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <>
-        {view === "Patients" && (patient ? <PatientView key={patient} id={patient} back={() => setPatient(null)} /> : <Roster select={setPatient} email={provider.email} />)}
+        {view === "Patients" && (patient ? <><Button className="mb-4" onClick={() => setView("Patient messages")}>Message patient</Button><PatientView key={patient} id={patient} back={() => setPatient(null)} /></> : <Roster select={setPatient} email={provider.email} />)}
+        {view === "Messages" && <Messages />}
+        {view === "Patient messages" && <Messages userId={patient ?? undefined} />}
         {view === "Resources" && <ResourceLibrary />}
         {view === "Reports" && <Reports />}
         {view === "Shared quiz results" && <QuizInbox />}
