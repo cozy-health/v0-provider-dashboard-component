@@ -11,8 +11,8 @@ import { useDesktopNavigation } from "@/hooks/use-desktop-navigation"
 import { AdminThemeSelector } from "./theme-selector"
 import { adminModules } from "@/lib/admin-modules"
 import "./admin-theme.css"
-import { AdminIcon, moduleVisuals } from "./admin-visuals"
-const groups = [
+import { AdminIcon, moduleVisual } from "./admin-visuals"
+const groups: { label: string; items: [string, string][] }[] = [
  { label: "Overview", items: [["/admin", "Overview"], ["/admin/datacenter", "Analytics"], ["/admin/safety", "Safety"]] },
  { label: "People & Wellness", items: adminModules.filter(([key]) => ["users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
  { label: "Community", items: adminModules.filter(([key]) => ["communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
@@ -41,7 +41,7 @@ export function AdminShell({ expires, children, name = "Admin", capabilities = [
  if (!visible.length) return null
  return <div key={group.label}><p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{group.label}</p><div className="space-y-1">{visible.map(([href, label]) => {
  const key = href === "/admin" ? "dashboard" : href.split("/").pop()!
- return <Link key={href} href={href} prefetch={false} onClick={() => setOpen(false)} aria-current={pathname === href ? "page" : undefined} className={`admin-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${pathname === href ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}><AdminIcon small visual={moduleVisuals[key]} /><span>{label}</span></Link>
+ return <Link key={href} href={href} prefetch={false} onClick={() => setOpen(false)} aria-current={pathname === href ? "page" : undefined} className={`admin-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${pathname === href ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}><AdminIcon small visual={moduleVisual(key)} /><span>{label}</span></Link>
  })}</div></div>
  })}</nav><p className="mt-6 rounded-2xl border p-4 text-xs leading-relaxed text-muted-foreground"><Heart aria-hidden="true" className="mb-2 size-4 text-[var(--cozy-green)]" />Built around care. Aggregate reporting · Minimum cohort 5 · No patient drill-down</p></>
  const signOut = <Button className="min-h-11" variant="outline" disabled={busy} onClick={logout}><LogOut className="size-4" />{busy ? "Signing out..." : "Logout"}</Button>

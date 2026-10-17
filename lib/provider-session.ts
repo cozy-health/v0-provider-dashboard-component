@@ -40,6 +40,8 @@ export function apiBase() {
 // Only the existing provider contract can be reached through the bridge.
 export function allowedRoute(path: string, method: string) {
   const rules: [RegExp, string[]][] = [
+    [/^audio-attachments$/, ["POST"]],
+    [/^audio-attachments\/[a-f0-9-]{36}$/, ["GET"]],
     [/^conversations$/, ["GET"]],
     [/^conversations\/\d+\/messages$/, ["GET", "POST"]],
     [/^conversations\/\d+\/read$/, ["POST"]],

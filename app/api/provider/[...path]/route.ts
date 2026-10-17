@@ -9,9 +9,9 @@ const noStore = { "Cache-Control": "private, no-store", "X-Content-Type-Options"
 function error(message: string, status: number) { return NextResponse.json({ message }, { status, headers: noStore }) }
 function clear(response: NextResponse) { response.cookies.set(SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 }); return response }
 
-async function boundedBody(request: Request) {
+async function boundedBody(request: Request, audio = false) {
   const reader = request.body?.getReader()
-  if (!reader) return ""
+  if (!reader) return Buffer.alloc(0)
   const chunks: Uint8Array[] = []
   let size = 0
   try {
@@ -19,10 +19,10 @@ async function boundedBody(request: Request) {
       const { done, value } = await reader.read()
       if (done) break
       size += value.byteLength
-      if (size > 65536) { await reader.cancel(); return null }
+      if (size > (audio ? 21 * 1024 * 1024 : 65536)) { await reader.cancel(); return null }
       chunks.push(value)
     }
-    return Buffer.concat(chunks).toString("utf8")
+    return Buffer.concat(chunks)
   } finally { reader.releaseLock() }
 }
 
@@ -47,16 +47,24 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   try {
     const base = apiBase()
     const headers: Record<string, string> = { Accept: "application/json" }
+    const audioPlayback = method === "GET" && /^audio-attachments\/[a-f0-9-]{36}$/.test(path)
+    if (audioPlayback && request.headers.has("range")) headers.Range = request.headers.get("range") ?? ""
     const userAgent = request.headers.get("user-agent")
     if (userAgent) headers["User-Agent"] = userAgent.slice(0, 1000)
     if (session) headers.Authorization = `Bearer ${session.token}`
-    let body: string | undefined
+    let body: string | Uint8Array<ArrayBuffer> | undefined
     if (["POST", "PATCH"].includes(method)) {
-      if (!request.headers.get("content-type")?.startsWith("application/json")) return error("JSON is required.", 415)
-      const raw = await boundedBody(request)
+      const audioUpload = path === "audio-attachments" && method === "POST"
+      if (audioUpload && !request.headers.get("content-type")?.startsWith("multipart/form-data;")) return error("An audio upload is required.", 415)
+      if (!audioUpload && !request.headers.get("content-type")?.startsWith("application/json")) return error("JSON is required.", 415)
+      const raw = await boundedBody(request, audioUpload)
       if (raw === null) return error("Request is too large.", 413)
+      if (audioUpload) {
+        body = new Uint8Array(raw)
+        headers["Content-Type"] = request.headers.get("content-type") ?? ""
+      } else {
       let data
-      try { data = JSON.parse(raw) } catch { return error("Invalid request.", 400) }
+      try { data = JSON.parse(raw.toString("utf8")) } catch { return error("Invalid request.", 400) }
       if (login || register) {
         // Validate encryption configuration before issuing any backend credential.
         sealSession({ token: "configuration-check", expires: Date.now() })
@@ -64,6 +72,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       }
       body = JSON.stringify(data)
       headers["Content-Type"] = "application/json"
+      }
     }
     const upstream = async (url: URL, verb = method, payload = body) => {
       const send = () => fetch(url, { method: verb, headers, body: payload, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(60000) })
@@ -91,7 +100,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       return renewCookie(new NextResponse(await pdf.arrayBuffer(), { headers: { ...noStore, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="provider-report-${id}.pdf"` } }))
     }
     const target = new URL(path, base)
-    for (const name of ["page", "per_page", "from", "to", "action", "resource_type"]) {
+    for (const name of ["page", "per_page", "from", "to", "action", "resource_type", "before", "since"]) {
       const value = request.nextUrl.searchParams.get(name)
       if (value !== null) target.searchParams.set(name, value)
     }
@@ -100,6 +109,14 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       if (!result.ok && result.status !== 401) return error("Sign out could not be completed. Please retry.", 502)
       return clear(NextResponse.json({ message: "Signed out." }, { headers: noStore }))
     }
+    if (method === "GET" && /^audio-attachments\/[a-f0-9-]{36}$/.test(path) && result.ok) {
+      const contentType = result.headers.get("content-type") ?? ""
+      if (!/^(audio\/|video\/(webm|mp4)|application\/ogg)/.test(contentType)) return error("Invalid audio response.", 502)
+      const playbackHeaders = new Headers({ ...noStore, "Content-Type": contentType })
+      for (const name of ["Content-Length", "Content-Range", "Accept-Ranges"]) { const value = result.headers.get(name); if (value) playbackHeaders.set(name, value) }
+      return renewCookie(new NextResponse(result.body, { status: result.status, headers: playbackHeaders }))
+    }
+    if (audioPlayback && result.status === 416) return renewCookie(new NextResponse(null, { status: 416, headers: { ...noStore, "Content-Range": result.headers.get("content-range") ?? "bytes */0" } }))
     const data = await result.json()
     if (!result.ok) {
       if (result.status === 429) {
