@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
 import { Loading } from "./data-list"
+import { SharedRecordCard, type SharedRecord } from "./shared-record-card"
 
 type Thread = { id: number; name: string; user_id: number; unread: number }
-type RecordCard = { type: string; id: string; unavailable?: boolean; data?: Record<string, unknown> }
-type Message = { id: number; sender: string; content: string; records: RecordCard[]; created_at: string }
+type Message = { id: number; sender: string; content: string; records: SharedRecord[]; created_at: string }
 export function Messages({ userId }: { userId?: number }) {
   const [threads, setThreads] = useState<Thread[]>([]), [selected, setSelected] = useState<number | null>(null)
   const [messages, setMessages] = useState<Message[]>([]), [more, setMore] = useState(false)
@@ -75,9 +75,9 @@ export function Messages({ userId }: { userId?: number }) {
       <div ref={feed} className="flex h-[50vh] flex-col gap-3 overflow-y-auto" aria-live="polite">
         {selected && more && messages.length > 0 && <Button variant="ghost" onClick={older}>Load earlier messages</Button>}
         {selected && !messages.length && <p className="text-sm text-muted-foreground">Start a conversation with your patient.</p>}
-        {(selected ? messages : []).map(m => <article key={m.id} className={`max-w-[90%] rounded-2xl p-3 sm:max-w-[75%] ${m.sender === "provider" ? "self-end bg-primary text-primary-foreground" : "self-start bg-muted"}`}>
-          {m.records.map(r => <div key={`${r.type}-${r.id}`} className="mb-2 rounded-lg border border-current/20 p-3 text-sm"><strong className="capitalize">{r.type}</strong>{r.unavailable ? <p>Record unavailable or sharing disabled.</p> : Object.entries(r.data ?? {}).filter(([k, v]) => v != null && !k.endsWith('_at')).map(([k, v]) => <p key={k} className="break-words"><span className="capitalize">{k.replaceAll('_', ' ')}</span>: {String(v)}</p>)}</div>)}
-          <p className="whitespace-pre-wrap break-words">{m.content}</p><time className="mt-1 block text-right text-xs opacity-75">{new Date(m.created_at).toLocaleString()}</time>
+        {(selected ? messages : []).map(m => <article key={m.id} className={`rounded-2xl ${m.records.length ? "w-full max-w-[94%] sm:max-w-lg " + (m.sender === "provider" ? "self-end" : "self-start") : "max-w-[90%] p-3 sm:max-w-[75%] " + (m.sender === "provider" ? "self-end bg-primary text-primary-foreground" : "self-start bg-muted")}`}>
+          {m.records.map(r => <SharedRecordCard key={`${r.type}-${r.id}`} record={r} />)}
+          <p className="whitespace-pre-wrap break-words">{m.content}</p>{m.records.length === 0 && <time className="mt-1 block text-right text-xs opacity-75">{new Date(m.created_at).toLocaleString()}</time>}
         </article>)}
       </div>
       <form className="mt-4 flex items-end gap-2" onSubmit={e => { e.preventDefault(); void send() }}><textarea aria-label="Message" placeholder="Write a message…" maxLength={5000} disabled={!selected || sending} value={draft} onChange={e => setDraft(e.target.value)} className="min-h-12 min-w-0 flex-1 rounded-xl border bg-background p-3" /><Button type="submit" disabled={!selected || sending || !draft.trim()}>{sending ? "Sending…" : error ? "Retry send" : "Send"}</Button></form>
