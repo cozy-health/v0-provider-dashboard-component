@@ -18,6 +18,7 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -25,3 +26,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Temporary files and generated outputs
+analyze.txt
+analyze_*.txt
+*.log
+build/
+.dart_tool/
+.next/
+.next-review*/
+node_modules/
+.DS_Store
+Thumbs.db
+scratch/
+tmp/

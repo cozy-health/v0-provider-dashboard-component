@@ -1,0 +1,62 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 768,
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 768,
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "overflow": false,
+      "touchTarget": 44
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "background": "rgb(0, 0, 0)",
+      "overflow": false,
+      "touchTarget": 44
+    }
+  ],
+  "persistence": true,
+  "keyboard": true
+}

@@ -1,44 +1,46 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import { headers } from 'next/headers'
+import { PageAnalytics } from '@/components/page-analytics'
 import './globals.css'
-
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Cozy Health Provider Dashboard',
+  description: 'Cozy Health provider portal',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
+        url: '/cozy-favicon-32.png?v=2',
+        type: 'image/png',
+        sizes: '32x32',
       },
       {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/cozy-favicon-48.png?v=2',
+        type: 'image/png',
+        sizes: '48x48',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: [{ url: '/cozy-apple-icon.png?v=2', type: 'image/png', sizes: '180x180' }],
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        {children}
-        <Analytics />
+        <ThemeProvider nonce={nonce} attribute="class" defaultTheme="system" enableSystem>
+          <ThemeToggle />
+          {children}
+          <Toaster />
+        </ThemeProvider>
+          <PageAnalytics />
       </body>
     </html>
   )
