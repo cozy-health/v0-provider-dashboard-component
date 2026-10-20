@@ -196,7 +196,7 @@ try {
     await reviewThemes(page, 'provider-alias')
     assert.equal(new URL(page.url()).pathname, '/provider')
     assert.equal(await page.locator('a[href^="/admin"]').count(), 0)
-    await page.getByRole('button', { name: 'Shared quiz results', exact: true }).click()
+    await page.getByRole('button', { name: 'Shared assessment results', exact: true }).click()
     await page.getByText('Test shared Fixture shared assessment').waitFor()
     await page.getByRole('button', { name: 'View result', exact: true }).click()
     await page.getByText('Score: 4 / 27', { exact: true }).waitFor()

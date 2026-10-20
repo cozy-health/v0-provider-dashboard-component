@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
-import { api, Client, Mood, Journal, Quiz, Note, Assignment, Resource } from "@/lib/provider-api"
+import { api, Client, Mood, Journal, Assessment, Note, Assignment, Resource } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +45,7 @@ function PatientSections({ client }: { client: Client }) {
         {!Object.values(shared).some(Boolean) && <Empty>This patient has not shared any data types. Resource assignments remain available.</Empty>}
         {shared.moods && <section><h3 className="text-lg font-semibold mb-4">Mood check-ins, triggers and coping</h3><MoodHistory path={`${base}/moods`} /></section>}
         {shared.journals && <section><h3 className="text-lg font-semibold mb-4">Journal summaries</h3><DataList<Journal> path={`${base}/journals`} empty="No shared journal entries yet." render={entry => <Card><h4 className="font-medium">{entry.title || "Journal entry"}</h4><p className="text-sm text-muted-foreground">{entry.type} · {entry.word_count ?? 0} words{entry.has_voice ? " · Voice entry" : ""} · {date(entry.created_at)}</p></Card>} /></section>}
-        {shared.quizzes && <section><h3 className="text-lg font-semibold mb-4">Quiz results</h3><DataList<Quiz> path={`${base}/quizzes`} empty="No shared quiz results yet." render={entry => <Card><h4 className="font-medium">{entry.quiz_slug}</h4><p className="text-sm">Score: {entry.score} · {entry.interpretation}</p><p className="text-xs text-muted-foreground mt-2">{date(entry.completed_at)}</p></Card>} /></section>}
+        {shared.quizzes && <section><h3 className="text-lg font-semibold mb-4">Assessment results</h3><DataList<Assessment> path={`${base}/quizzes`} empty="No shared assessment results yet." render={entry => <Card><h4 className="font-medium">{entry.quiz_slug}</h4><p className="text-sm">Score: {entry.score} · {entry.interpretation}</p><p className="text-xs text-muted-foreground mt-2">{date(entry.completed_at)}</p></Card>} /></section>}
       </TabsContent>
       {shared.notes && <TabsContent value="notes" className="mt-5"><Notes path={`${base}/notes`} /></TabsContent>}
       <TabsContent value="resources" className="mt-5"><Assignments path={`${base}/resources`} /></TabsContent>

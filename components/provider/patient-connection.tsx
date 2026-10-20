@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 type Invitation = { invitation_id: number; patient_name: string; consent_flags: Record<ConsentType, boolean>; expires_at: string }
-const scopeLabels: Record<ConsentType, string> = { moods: "Mood entries, triggers and coping choices", journals: "Journal summaries (no journal body or recordings)", quizzes: "Quiz results", notes: "Provider notes" }
+const scopeLabels: Record<ConsentType, string> = { moods: "Mood entries, triggers and coping choices", journals: "Journal summaries (no journal body or recordings)", quizzes: "Assessment results", notes: "Provider notes" }
 export function PatientConnection({ email, close, connected }: { email: string; close: () => void; connected: () => void }) {
  const [code, setCode] = useState(""), [preview, setPreview] = useState<Invitation | null>(null)
  const [care, setCare] = useState(false), [revocation, setRevocation] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("")

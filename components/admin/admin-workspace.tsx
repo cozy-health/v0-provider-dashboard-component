@@ -15,7 +15,7 @@ type Usage = { features: (Cell & { feature: string })[] }
 type Resolution = { median_seconds: number | null; sample_count: number }
 type Operations = { queue?: { overdue_reports: number; oldest_open_support_seconds: number | null; resolution: { reports: Resolution; support: Resolution; window: { from: string; to: string } } }; checked_at: string; totals: Record<string, number>; attention: { id: number; kind: string; label: string; created_at: string; due_at: string | null }[]; activity: { id: number; action: string; resource: string; created_at: string }[] }
 const series = ["var(--cozy-blue)", "var(--cozy-green)", "var(--cozy-orange)", "var(--cozy-yellow)"]
-const names: Record<string, string> = { mood_entries: "Mood check-ins", journal_entries: "Published journals", quiz_attempts: "Completed quizzes" }
+const names: Record<string, string> = { mood_entries: "Mood check-ins", journal_entries: "Published journals", quiz_attempts: "Completed assessments" }
 function exported(cell: Cell) { return cell.status === "available" ? cell.count : cell.status === "suppressed" ? "Suppressed (<5)" : cell.status === "immature" ? "Not mature" : "Unavailable" }
 const ExportContext = createContext<Record<string, string> | null>(null)
 function value(cell: Cell) { return cell.status === "available" && typeof cell.count === "number" ? cell.count : null }

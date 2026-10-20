@@ -9,7 +9,12 @@ const nextConfig = {
   } : {}),
   allowedDevOrigins: ['127.0.0.1', 'localhost'],
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [{ source: '/:path*', headers: [
+      ...securityHeaders,
+      ...(process.env.COZY_DEPLOYMENT_ENV === 'production' ? [] : [
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+      ]),
+    ] }]
   },
   images: {
     unoptimized: true,

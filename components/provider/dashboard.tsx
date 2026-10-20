@@ -20,7 +20,7 @@ import { QuizInbox } from "./quiz-inbox"
 
 import { Messages } from "./messages"
 
-const navigation = [{ name: "Messages", icon: MessageCircle }, { name: "Patients", icon: Users }, { name: "Shared quiz results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
+const navigation = [{ name: "Messages", icon: MessageCircle }, { name: "Patients", icon: Users }, { name: "Shared assessment results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
 export function ProviderDashboard({ expires }: { expires: number }) {
   const [open, setOpen] = useState(false)
   const closeNavigation = useCallback(() => setOpen(false), [])
@@ -63,7 +63,7 @@ export function ProviderDashboard({ expires }: { expires: number }) {
         {view === "Patient messages" && <Messages userId={patient ?? undefined} />}
         {view === "Resources" && <ResourceLibrary />}
         {view === "Reports" && <Reports />}
-        {view === "Shared quiz results" && <QuizInbox />}
+        {view === "Shared assessment results" && <QuizInbox />}
         {view === "Audit log" && <AuditLog />}
         {view === "Settings" && <ProviderSettings provider={provider} saved={profile.reload} />}
       </>}
