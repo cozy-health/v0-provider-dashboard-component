@@ -12,7 +12,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   if (method !== "GET" && !validAdminOrigin(request)) return error("Request origin could not be verified.", 403)
   if (!adminRoute(path, method)) return error("Page not found.", 404)
   const metric = path.startsWith("metrics/")
-  const list = /^(student-applications|users|quizzes|reports|support|subscriptions(?:\/history)?|emails|content\/[a-z]+|community\/(posts|comments|members))$/.test(path)
+  const list = /^(age-cases|student-applications|users|quizzes|reports|support|subscriptions(?:\/history)?|emails|content\/[a-z]+|community\/(posts|comments|members))$/.test(path)
   const allowed = ["metrics/usage", "metrics/insights"].includes(path) ? ["range"] : list && method === "GET" ? ["search", "page", "per_page", ...(["reports", "support"].includes(path) ? ["status", ...(path === "reports" ? ["overdue"] : [])] : []), ...(path.startsWith("community/") ? ["group_id"] : [])] : []
   if ([...request.nextUrl.searchParams.keys()].some(key => !allowed.includes(key))) return error(metric ? "Only fixed reporting ranges are supported." : "Unsupported filter.", 422)
   const range = request.nextUrl.searchParams.get("range")

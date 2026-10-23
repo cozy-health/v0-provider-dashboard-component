@@ -39,6 +39,8 @@ export function validAdminOrigin(request: Request) {
 export function adminRoute(path: string, method: string) {
   if (method === "GET" && (path === "student-applications" || /^student-applications\/[a-f0-9-]{36}\/evidence$/.test(path))) return true
   if (method === "POST" && /^student-applications\/[a-f0-9-]{36}\/review$/.test(path)) return true
+  if (method === 'GET' && path === 'age-cases') return true
+  if (method === 'POST' && /^age-cases\/[a-f0-9-]{36}\/resolve$/.test(path)) return true
   const catalog = "content/(moods|expressions|triggers|coping|communities|challenges|packages)"
   if (method === "GET" && path === "subscriptions/history") return true
   if (method === "GET" && /^community\/(posts|comments|members)$/.test(path)) return true
