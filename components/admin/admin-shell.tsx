@@ -14,13 +14,12 @@ import "./admin-theme.css"
 import { AdminIcon, moduleVisual } from "./admin-visuals"
 const groups: { label: string; items: [string, string][] }[] = [
  { label: "Overview", items: [["/admin", "Overview"], ["/admin/datacenter", "Analytics"], ["/admin/safety", "Safety"]] },
- { label: "People & Wellness", items: adminModules.filter(([key]) => ["users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
+ { label: "People & Wellness", items: adminModules.filter(([key]) => ["articles", "users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
  { label: "Community", items: adminModules.filter(([key]) => ["communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
- { label: "Operations", items: adminModules.filter(([key]) => ["packages", "subscriptions", "student-applications", "age-cases", "subscription-events", "emails", "support"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
+ { label: "Operations", items: adminModules.filter(([key]) => ["packages", "subscriptions", "student-applications", "subscription-events", "emails", "support"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
 ]
 function capability(href: string) {
  const moduleKey = href.split("/").pop()
-   if (moduleKey === "age-cases") return "admin:guardians"
  if (["users"].includes(moduleKey!)) return "admin:users"
  if (["reports", "support", "posts", "comments", "members"].includes(moduleKey!)) return "admin:moderation"
  if (["packages", "subscriptions", "subscription-events"].includes(moduleKey!)) return "admin:subscriptions"

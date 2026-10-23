@@ -29,6 +29,14 @@ test('management routes permit only the implemented resource methods and identif
   for (const [path, method] of [['users', 'GET'], ['community/posts/12345678-1234-1234-1234-123456789abc', 'GET'], ['content/moods', 'POST'], ['content/coping/3', 'DELETE'], ['quizzes/8/publish', 'POST'], ['emails/welcome/preview', 'GET'], ['subscriptions/history', 'GET']]) assert.equal(adminRoute(path, method), true)
   for (const [path, method] of [['users', 'POST'], ['users/12', 'PUT'], ['users/12', 'DELETE'], ['community/posts/'+ '-'.repeat(36), 'GET'], ['content/unknown', 'GET'], ['content/moods/../users', 'PUT'], ['quizzes/1/publish', 'DELETE'], ['settings/test', 'PUT'], ['community/posts/not-a-uuid', 'PUT']]) assert.equal(adminRoute(path, method), false)
 })
+test('article publishing proxy permits only scoped resource operations', () => {
+  const id = '12345678-1234-1234-1234-123456789abc'
+  for (const method of ['GET', 'POST']) assert.equal(adminRoute('articles', method), true)
+  for (const method of ['GET', 'PUT', 'DELETE']) assert.equal(adminRoute(`articles/${id}`, method), true)
+  assert.equal(adminRoute(`articles/${id}/publish`, 'POST'), true)
+  for (const [path, method] of [['articles/not-a-uuid', 'PUT'], [`articles/${id}/publish`, 'GET'], ['articles/../users', 'DELETE'], ['articles', 'DELETE']]) assert.equal(adminRoute(path, method), false)
+})
+
 test('admin CSRF requires exact origin and explicit header', () => {
   const token = csrfToken()
   const request = headers => new Request('https://admin.example.test/api/admin/auth/login', { method: 'POST', headers: { cookie: `${CSRF_COOKIE}=${token}`, 'x-csrf-token': token, ...headers } })
