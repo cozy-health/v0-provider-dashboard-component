@@ -24,6 +24,8 @@ export type Client = { user_id: number; name: string; linked_at: string; consent
 export type Page<T> = { data: T[]; current_page: number; last_page: number; total: number }
 export type Mood = { id: string; mood: string; intensity: number; triggers: string[] | null; custom_trigger: string | null; coping_strategies: string[] | null; coping_helped: string | null; client_created_at: string | null; created_at: string }
 export type Journal = { id: string; title: string | null; type: string; word_count: number; has_voice: boolean; created_at: string }
+// Fetch online for one explicitly shared copy. Never persist its entry in browser storage.
+export type SharedJournalCopy = { share_id: string; entry: { title: string; body: string }; shared_at: string; later_edits_shared: false }
 export type Assessment = { id: string; quiz_slug: string; score: number; interpretation: string; completed_at: string }
 export type QuizShare = { id: number; user_id: number; sender: string; quiz_title: string; completed_at: string; read_at: string | null }
 export type SharedQuizResult = Assessment & { quiz_title: string; maximum_score: number; disclaimer: string; recommendation: string }

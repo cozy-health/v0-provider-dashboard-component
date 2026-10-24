@@ -17,6 +17,21 @@ test('messaging bridge permits only conversation reads, sends and read markers',
   assert.equal(allowedRoute('provider-conversations', 'GET'), false)
 })
 
+test('journal copy bridge permits recipient reads without exposing share mutations', () => {
+  const id = '13bfa531-5709-445b-802c-7b04cd4d699d'
+  const path = `conversations/12/journal-shares/${id}`
+  assert.equal(allowedRoute(path, 'GET'), true)
+  for (const method of ['POST', 'PATCH', 'DELETE']) assert.equal(allowedRoute(path, method), false)
+  for (const invalid of [
+    'conversations/12/journal-shares',
+    'conversations/12/journal-shares/preview',
+    'conversations/12/journal-shares/not-a-uuid',
+    `provider-conversations/12/journal-shares/${id}`,
+    `conversations/12/journal-shares/${id}/other`,
+    `conversations/12/journal-shares/../${id}`,
+  ]) assert.equal(allowedRoute(invalid, 'GET'), false)
+})
+
 test('session encrypts credentials, authenticates ciphertext and enforces expiry', () => {
   const session = { token: 'private-provider-token', expires: Date.now() + 60000 }
   const cookie = sealSession(session)
