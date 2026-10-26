@@ -22,7 +22,7 @@ function capability(href: string) {
  const moduleKey = href.split("/").pop()
  if (["users"].includes(moduleKey!)) return "admin:users"
  if (["reports", "support", "posts", "comments", "members"].includes(moduleKey!)) return "admin:moderation"
- if (["packages", "subscriptions", "subscription-events"].includes(moduleKey!)) return "admin:subscriptions"
+ if (["packages", "subscriptions", "subscription-events", "student-applications"].includes(moduleKey!)) return "admin:subscriptions"
  if (moduleKey === "emails") return "admin:email"
  return href.includes("/manage/") && !["user-triggers", "user-coping"].includes(moduleKey!) ? "admin:content" : "admin:metrics"
 }

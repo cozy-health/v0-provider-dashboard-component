@@ -43,6 +43,7 @@ export function adminRoute(path: string, method: string) {
   if (method === "GET" && (path === "student-applications" || /^student-applications\/[a-f0-9-]{36}\/evidence$/.test(path))) return true
   if (method === "POST" && /^student-applications\/[a-f0-9-]{36}\/review$/.test(path)) return true
   const catalog = "content/(moods|expressions|triggers|coping|communities|challenges|packages)"
+  if (method === "GET" && /^content\/packages\/\d+$/.test(path)) return true
   if (method === "GET" && path === "subscriptions/history") return true
   if (method === "GET" && /^community\/(posts|comments|members)$/.test(path)) return true
   if (method === "GET" && /^community\/(posts|comments)\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
