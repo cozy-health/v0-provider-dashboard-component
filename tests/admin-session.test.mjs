@@ -37,6 +37,12 @@ test('article publishing proxy permits only scoped resource operations', () => {
   for (const [path, method] of [['articles/not-a-uuid', 'PUT'], [`articles/${id}/publish`, 'GET'], ['articles/../users', 'DELETE'], ['articles', 'DELETE']]) assert.equal(adminRoute(path, method), false)
 })
 
+test('development test access proxy permits only grant history, grant and UUID revocation', () => {
+  for (const method of ['GET', 'POST']) assert.equal(adminRoute('development-access', method), true)
+  assert.equal(adminRoute('development-access/12345678-1234-1234-1234-123456789abc', 'DELETE'), true)
+  for (const [path, method] of [['development-access', 'DELETE'], ['development-access', 'PUT'], ['development-access/not-a-uuid', 'DELETE'], ['development-access/12345678-1234-1234-1234-123456789abc', 'PUT']]) assert.equal(adminRoute(path, method), false)
+})
+
 test('admin CSRF requires exact origin and explicit header', () => {
   const token = csrfToken()
   const request = headers => new Request('https://admin.example.test/api/admin/auth/login', { method: 'POST', headers: { cookie: `${CSRF_COOKIE}=${token}`, 'x-csrf-token': token, ...headers } })

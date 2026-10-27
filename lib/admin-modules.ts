@@ -7,5 +7,6 @@ export const adminModules = [
  ["packages", "Packages"], ["subscriptions", "Subscription Logs"], ["emails", "Email Triggers"],
  ["posts", "Community Posts"], ["comments", "Community Comments"], ["members", "Community Members"],
  ["student-applications", "Student Verification"],
+ ["development-access", "Development test access"],
  ["subscription-events", "Subscription Events"],
 ] as const

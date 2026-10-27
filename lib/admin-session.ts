@@ -37,6 +37,8 @@ export function validAdminOrigin(request: Request) {
   return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1" && validCsrf(request)
 }
 export function adminRoute(path: string, method: string) {
+  if (["GET", "POST"].includes(method) && path === "development-access") return true
+  if (method === "DELETE" && /^development-access\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
   if (["GET", "POST"].includes(method) && path === "articles") return true
   if (["GET", "PUT", "DELETE"].includes(method) && /^articles\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
   if (method === "POST" && /^articles\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/publish$/.test(path)) return true
