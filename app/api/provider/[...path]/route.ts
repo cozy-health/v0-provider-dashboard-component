@@ -51,7 +51,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     if (audioPlayback && request.headers.has("range")) headers.Range = request.headers.get("range") ?? ""
     const userAgent = request.headers.get("user-agent")
     if (userAgent) headers["User-Agent"] = userAgent.slice(0, 1000)
-    if (session) headers.Authorization = `Bearer ${session.token}`
+    if (session && !publicAuth) headers.Authorization = `Bearer ${session.token}`
     let body: string | Uint8Array<ArrayBuffer> | undefined
     if (["POST", "PATCH"].includes(method)) {
       const audioUpload = path === "audio-attachments" && method === "POST"
