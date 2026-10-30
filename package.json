@@ -13,6 +13,7 @@
     "test:admin": "node tests/admin-integration.mjs",
     "test:admin-management": "node tests/admin-management-integration.mjs",
     "test:provider-onboarding": "node tests/provider-onboarding-integration.mjs",
+    "test:provider-protection": "node tests/provider-protection-integration.mjs",
     "setup:admin-preview": "node scripts/setup-admin-preview.mjs",
     "dev:admin-api": "node scripts/setup-admin-preview.mjs --serve",
     "test:admin-local": "node tests/admin-local-integration.mjs",

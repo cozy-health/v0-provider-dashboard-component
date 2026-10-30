@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto"
 
 export const SESSION_SECONDS = 1800
 export const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-cozy-provider" : "cozy-provider"
-export type ProviderSession = { token: string; refreshToken?: string; expires: number }
+export type ProviderSession = { token: string; refreshToken?: string; expires: number; email?: string; deviceProof?: string }
 
 function key() {
   const secret = process.env.PROVIDER_SESSION_SECRET
@@ -11,24 +11,36 @@ function key() {
   return Buffer.from(secret, "hex")
 }
 
-export function sealSession(session: ProviderSession) {
+export function sealValue(value: unknown, purpose?: string) {
   const iv = randomBytes(12)
   const cipher = createCipheriv("aes-256-gcm", key(), iv)
-  const encrypted = Buffer.concat([cipher.update(JSON.stringify(session), "utf8"), cipher.final()])
+  if (purpose) cipher.setAAD(Buffer.from(purpose))
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()])
   return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString("base64url")
 }
 
-export function openSession(value?: string): ProviderSession | null {
-  if (!value) return null
+export function openValue(value: string | undefined, purpose?: string): unknown {
+  if (!value || value.length > 6000) return null
   try {
-    const bytes = Buffer.from(value, "base64url")
-    const decipher = createDecipheriv("aes-256-gcm", key(), bytes.subarray(0, 12))
+    const bytes = Buffer.from(value, 'base64url')
+    const decipher = createDecipheriv('aes-256-gcm', key(), bytes.subarray(0, 12))
+    if (purpose) decipher.setAAD(Buffer.from(purpose))
     decipher.setAuthTag(bytes.subarray(12, 28))
-    const session = JSON.parse(Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString("utf8"))
-    return typeof session.token === "string" && Number.isFinite(session.expires) && session.expires > Date.now() ? session : null
+    return JSON.parse(Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString('utf8'))
   } catch { return null }
 }
-
+export function sealSession(session: ProviderSession, scope: string | null = null) {
+  return sealValue(session, scope ? `provider-session:${scope}` : undefined)
+}
+export function openSession(value?: string, scope: string | null = null): ProviderSession | null {
+  const session = openValue(value, scope ? `provider-session:${scope}` : undefined)
+  if (!session || typeof session !== 'object' || !('token' in session) || !('expires' in session)) return null
+  if (typeof session.token !== 'string' || !session.token || typeof session.expires !== 'number' || !Number.isFinite(session.expires) || session.expires <= Date.now()) return null
+  const refreshToken = 'refreshToken' in session && typeof session.refreshToken === 'string' ? session.refreshToken : undefined
+  const email = 'email' in session && typeof session.email === 'string' ? session.email : undefined
+  const deviceProof = 'deviceProof' in session && typeof session.deviceProof === 'string' && /^[a-f0-9]{64}$/.test(session.deviceProof) ? session.deviceProof : undefined
+  return { token: session.token, expires: session.expires, ...(refreshToken ? { refreshToken } : {}), ...(email ? { email } : {}), ...(deviceProof ? { deviceProof } : {}) }
+}
 export function apiBase() {
   const url = new URL(process.env.PROVIDER_API_URL || "http://127.0.0.1:8000/api/v1/provider/")
   if (url.username || url.password || url.search || url.hash || !/^https?:$/.test(url.protocol)) throw new Error("Invalid provider API URL.")

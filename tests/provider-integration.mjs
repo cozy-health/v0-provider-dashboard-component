@@ -212,7 +212,12 @@ try {
     await page.getByLabel('Search patients').fill('10')
     await page.getByRole('button', { name: 'View patient' }).waitFor()
     await page.getByLabel('Search patients').fill('')
-    assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider'))
+    const scope = (await context.cookies()).find(cookie => cookie.name === 'cozy-provider-scope')?.value
+    const credential = (await context.cookies()).find(cookie => cookie.name === (scope ? `cozy-provider.${scope}` : SESSION_COOKIE))
+    assert.ok(credential?.httpOnly)
+    const visibleCookies = await page.evaluate(() => document.cookie)
+    assert.ok(!visibleCookies.includes(credential.name + '='))
+    assert.ok(!visibleCookies.includes('test-bearer-secret'))
     await page.getByRole('button', { name: 'Resources', exact: true }).click()
     await page.getByText('Build your resource library', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Add resource' }).click()
@@ -234,7 +239,7 @@ try {
     await page.getByText('Feedback: no', { exact: false }).waitFor()
     assert.equal(await page.locator('.recharts-bar-rectangle path').count(), 2)
     await page.getByText('No shared journal entries yet.').waitFor()
-    await page.getByText('No shared quiz results yet.').waitFor()
+    await page.getByText('No shared assessment results yet.').waitFor()
     populatedHistory = true
     await page.getByRole('button', { name: 'Refresh sharing' }).click()
     await page.getByRole('heading', { name: 'Shared summary fixture' }).waitFor()

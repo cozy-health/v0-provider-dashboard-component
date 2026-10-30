@@ -99,8 +99,11 @@ try {
  assert.ok(!registrationBody.includes('fixture-provider-token')); assert.ok(!registrationBody.includes('fixture-refresh-secret'))
  await page.getByText(/No linked patients yet/).waitFor()
  assert.equal(registrations, 1)
- assert.ok((await context.cookies()).find(cookie => cookie.name === 'cozy-provider')?.httpOnly)
- assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider'))
+ const currentScope = (await context.cookies()).find(cookie => cookie.name === 'cozy-provider-scope')?.value
+ assert.ok(currentScope)
+ assert.ok((await context.cookies()).find(cookie => cookie.name === 'cozy-provider.' + currentScope)?.httpOnly)
+ assert.ok(!(await page.evaluate(() => document.cookie)).includes('fixture-provider-token'))
+ assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider.' + currentScope + '='))
  await reviewThemes(page, 'provider-empty')
  await page.screenshot({ path: '../docs/validation/provider-onboarding/empty-roster.png', fullPage: true })
  await page.getByRole('button', { name: 'Accept patient invitation', exact: true }).click()

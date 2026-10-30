@@ -20,6 +20,8 @@ test('public provider authentication never forwards the previous account bearer'
       exports, Buffer, URL, Headers, AbortSignal, Request, Response, process: { env: { NODE_ENV: 'test' } },
       require(name) {
         if (name === 'next/server') return { NextResponse: BridgeResponse }
+        if (name === '@/lib/provider-auth-scope') return { cookieScope: () => null, scopedCookie: name => name, SCOPE_HEADER: 'X-Cozy-Provider-Scope' }
+        if (name === '@/lib/provider-protection') return { retirePreviousScopes: (_request, response) => response, beginProtection: () => null, rememberedProof: () => undefined, rememberProof: response => response, protectionRequest: () => { throw new Error('Not a security request') } }
         if (name === '@/lib/provider-session') return {
           allowedRoute: () => false, apiBase: () => new URL('https://api.example.test/api/v1/provider/'),
           openSession: () => ({ token: 'previous-account-access', expires: Date.now() + 60000 }),

@@ -1,3 +1,4 @@
+import { assertBrowserScope, beginBrowserSignIn, browserScope, SCOPE_HEADER } from "./provider-auth-scope"
 import { mutationHeaders } from "./csrf"
 export class ApiError extends Error {
   constructor(public status: number, message: string, public retryAfter = 0) { super(message) }
@@ -6,18 +7,40 @@ export class ApiError extends Error {
 // A full document navigation discards patient data in React memory on auth changes.
 export function freshNavigation(path: string) { window.location.replace(new URL(path, window.location.origin).href) }
 
+const responseScopes = new WeakMap<Response, string | null>()
+export function assertProviderResponse(response: Response) { assertBrowserScope(responseScopes.get(response) ?? null) }
+export async function providerFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const starting = ['auth/login', 'auth/register'].includes(path) && options.method === 'POST'
+  const scope = starting ? beginBrowserSignIn() : browserScope()
+  assertBrowserScope(scope)
+  const csrf = await mutationHeaders(options.method)
+  assertBrowserScope(scope)
+  const response = await fetch(`/api/provider/${path}`, { ...options, cache: 'no-store', credentials: 'same-origin', headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-Cozy-Request': '1', ...options.headers, ...csrf, ...(scope ? { [SCOPE_HEADER]: scope } : {}) } })
+  assertBrowserScope(scope)
+  if (response.status === 401 && !path.startsWith('auth/')) freshNavigation('/login?expired=1')
+  if (response.status === 403) {
+    const failure: unknown = await response.clone().json().catch(() => null)
+    assertBrowserScope(scope)
+    if (failure && typeof failure === 'object' && 'code' in failure && failure.code === 'signin_verification_required') freshNavigation('/login?expired=1')
+  }
+  responseScopes.set(response, scope)
+  return response
+}
+export function providerMediaUrl(path: string) {
+  const scope = browserScope()
+  return `/api/provider/${path}${scope ? `?scope=${scope}` : ''}`
+}
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api/provider/${path}`, { ...options, cache: "no-store", credentials: "same-origin", headers: { ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }), "X-Cozy-Request": "1", ...options.headers, ...await mutationHeaders(options.method) } })
+  const response = await providerFetch(path, options)
   const data = await response.json().catch(() => ({}))
+  assertProviderResponse(response)
   if (!response.ok) {
-    if (response.status === 401) freshNavigation("/login?expired=1")
-    const validation = data.errors ? Object.values(data.errors).flat().join(" ") : null
-    const retryAfter = Number(response.headers.get("Retry-After"))
-    throw new ApiError(response.status, validation || data.message || "Request failed. Please retry.", Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 0)
+    const validation = data.errors ? Object.values(data.errors).flat().join(' ') : null
+    const retryAfter = Number(response.headers.get('Retry-After'))
+    throw new ApiError(response.status, validation || data.message || 'Request failed. Please retry.', Number.isFinite(retryAfter) && retryAfter > 0 && retryAfter <= 86400 ? retryAfter : 0)
   }
   return data as T
 }
-
 export type Provider = { id: number; name: string; email: string; practice: string | null; timezone: string; is_verified: boolean; license_number: string | null; license_state: string | null }
 export type ConsentType = "moods" | "journals" | "quizzes" | "notes"
 export type Client = { user_id: number; name: string; linked_at: string; consent_flags: Record<ConsentType, boolean>; gender?: string; date_of_birth?: string }

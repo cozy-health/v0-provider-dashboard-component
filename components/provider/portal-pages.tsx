@@ -1,4 +1,6 @@
 "use client"
+import { providerFetch, assertProviderResponse } from "@/lib/provider-api"
+
 
 import { BookOpen } from "lucide-react"
 import { useState } from "react"
@@ -17,7 +19,7 @@ export function ProviderSettings({ provider, saved }: { provider: Provider; save
     try { await api("me", { method: "PATCH", body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) }); toast.success("Settings saved."); saved() }
     catch (err) { toast.error((err as Error).message) } finally { setBusy(false) }
   }
-  return <Card><form onSubmit={save} className="space-y-5 max-w-xl"><label className="block text-sm">Name<Input name="name" defaultValue={provider.name} required maxLength={120} className="mt-2" /></label><label className="block text-sm">Practice<Input name="practice" defaultValue={provider.practice || ""} maxLength={255} className="mt-2" /></label><label className="block text-sm">Timezone<Input name="timezone" defaultValue={provider.timezone || "UTC"} required placeholder="Africa/Lagos" className="mt-2" /></label><p className="text-xs text-muted-foreground">Timezone determines the default period for monthly reports. Use an IANA timezone such as Africa/Lagos or Europe/London.</p><label className="block text-sm">Registered email<Input value={provider.email} readOnly className="mt-2" /></label><p className="text-sm text-muted-foreground">License: {provider.license_number || "Not supplied"}{provider.license_state ? ` (${provider.license_state})` : ""}</p><Badge variant="secondary">{provider.is_verified ? "Verified provider" : "Verification pending"}</Badge><div><Button disabled={busy}>{busy ? "Saving…" : "Save settings"}</Button></div></form></Card>
+  return <Card><a href="/provider/security" className="inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-medium">Manage sign-in protection</a><form onSubmit={save} className="space-y-5 max-w-xl"><label className="block text-sm">Name<Input name="name" defaultValue={provider.name} required maxLength={120} className="mt-2" /></label><label className="block text-sm">Practice<Input name="practice" defaultValue={provider.practice || ""} maxLength={255} className="mt-2" /></label><label className="block text-sm">Timezone<Input name="timezone" defaultValue={provider.timezone || "UTC"} required placeholder="Africa/Lagos" className="mt-2" /></label><p className="text-xs text-muted-foreground">Timezone determines the default period for monthly reports. Use an IANA timezone such as Africa/Lagos or Europe/London.</p><label className="block text-sm">Registered email<Input value={provider.email} readOnly className="mt-2" /></label><p className="text-sm text-muted-foreground">License: {provider.license_number || "Not supplied"}{provider.license_state ? ` (${provider.license_state})` : ""}</p><Badge variant="secondary">{provider.is_verified ? "Verified provider" : "Verification pending"}</Badge><div><Button disabled={busy}>{busy ? "Saving…" : "Save settings"}</Button></div></form></Card>
 }
 
 export function ResourceLibrary() {
@@ -49,9 +51,11 @@ export function DownloadButton({ id }: { id: number }) {
   async function download() {
     setBusy(true)
     try {
-      const response = await fetch(`/api/provider/reports/${id}/pdf`, { cache: "no-store", credentials: "same-origin" })
+      const response = await providerFetch(`reports/${id}/pdf`)
       if (!response.ok) { if (response.status === 401) freshNavigation("/login?expired=1"); const data = await response.json(); throw new Error(data.message || "Download failed.") }
-      const url = URL.createObjectURL(await response.blob())
+      const blob = await response.blob()
+      assertProviderResponse(response)
+      const url = URL.createObjectURL(blob)
       const link = document.createElement("a"); link.href = url; link.download = `provider-report-${id}.pdf`; document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (err) { toast.error((err as Error).message) } finally { setBusy(false) }
   }
