@@ -8,7 +8,13 @@ export const dynamic = "force-dynamic"
 
 const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" }
 const noStore = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }
-function error(message: string, status: number) { return NextResponse.json({ message }, { status, headers: noStore }) }
+function recoveryCode(data: unknown, status: number) {
+  if (!data || typeof data !== "object" || !("code" in data)) return undefined
+  if (data.code === "signin_verification_required") return data.code
+  if (status === 403 && data.code === "consent_required") return data.code
+  return undefined
+}
+function error(message: string, status: number, code?: ReturnType<typeof recoveryCode>) { return NextResponse.json({ message, ...(code ? { code } : {}) }, { status, headers: noStore }) }
 function clear(response: NextResponse, scope: string | null = null) { response.cookies.set(scopedCookie(SESSION_COOKIE, scope), "", { ...cookieOptions, maxAge: 0 }); return response }
 
 async function boundedBody(request: Request, audio = false) {
@@ -104,12 +110,18 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     if (download) {
       const id = segments[1]
       const issued = await upstream(new URL(`reports/${id}/download`, base), "GET", undefined)
-      if (!issued.ok) return clearIfUnauthorized(error(issued.status === 404 ? "This report is no longer available. Generate a new report with current consent." : "Could not authorize the download.", issued.status), issued.status)
+      if (!issued.ok) {
+        const code = recoveryCode(await issued.json().catch(() => null), issued.status)
+        return clearIfUnauthorized(error(issued.status === 404 ? "This report is no longer available. Generate a new report with current consent." : "Could not authorize the download.", issued.status, code), issued.status, code)
+      }
       const data = await issued.json()
       const file = new URL(data.download_url, base.origin)
       if (file.origin !== base.origin || file.pathname !== `${base.pathname}reports/${id}/file` || file.username || file.password || file.hash) return error("Invalid report download.", 502)
       const pdf = await upstream(file, "GET", undefined)
-      if (!pdf.ok) return clearIfUnauthorized(error("This report is no longer available. Generate a new report with current consent.", pdf.status), pdf.status)
+      if (!pdf.ok) {
+        const code = recoveryCode(await pdf.json().catch(() => null), pdf.status)
+        return clearIfUnauthorized(error("This report is no longer available. Generate a new report with current consent.", pdf.status, code), pdf.status, code)
+      }
       if (!pdf.headers.get("content-type")?.startsWith("application/pdf")) return error("Invalid report response.", 502)
       return renewCookie(new NextResponse(await pdf.arrayBuffer(), { headers: { ...noStore, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="provider-report-${id}.pdf"` } }))
     }
@@ -142,7 +154,8 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
         return response
       }
       const message = result.status === 404 ? "This data is unavailable or access has changed." : result.status >= 500 ? "The provider service is temporarily unavailable." : data.message || "Request failed."
-      return clearIfUnauthorized(NextResponse.json({ message, code: data.code === "signin_verification_required" ? data.code : undefined, errors: result.status === 422 ? data.errors : undefined }, { status: result.status, headers: noStore }), result.status, data.code)
+      const code = recoveryCode(data, result.status)
+      return clearIfUnauthorized(NextResponse.json({ message, code, errors: result.status === 422 ? data.errors : undefined }, { status: result.status, headers: noStore }), result.status, code)
     }
     if (login || register) {
       const pending = beginProtection(request, data.data ?? {}, signInEmail)

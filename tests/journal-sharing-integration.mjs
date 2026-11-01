@@ -17,7 +17,7 @@ const backend = createServer(async (req, res) => {
   if (req.headers.authorization !== 'Bearer fictional-journal-test-token') return send({},401)
   if (path === 'me') return send({ data: { provider } })
   if (path === 'consent-config') return send({consent:{enforce_blocking:false,documents:{}}})
-  if (path === 'me/consents') return send({consents:[]})
+  if (path === 'me/consents') return send({owner_id:provider.id,data:[]})
   if (path === 'clients') return send({data:[],last_page:1,total:0})
   if (path === 'conversations') return send([{id:7,name:'Fictional Patient',user_id:10,unread:0}])
   if (path === 'conversations/7/read') return send({})

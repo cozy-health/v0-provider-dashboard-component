@@ -28,8 +28,8 @@ const backend=createServer(async(req,res)=>{
    privateCalls++;assert.ok(enrolled);assert.equal(req.headers.authorization,'Bearer fixture-provisional')
    return send(endpoint==='me'?{data:{provider}}:[])
   }
-  if(endpoint==='consent-config')return send({enforce_blocking:false,documents:{}})
-  if(endpoint==='me/consents')return send({data:[]})
+  if(endpoint==='consent-config')return send({consent:{enforce_blocking:false,documents:{}}})
+  if(endpoint==='me/consents')return send({owner_id:provider.id,data:[]})
   throw Error('Unexpected fixture endpoint '+endpoint)
  }catch(error){res.writeHead(500,{'content-type':'application/json'});res.end(JSON.stringify({message:error.message}))}
 })

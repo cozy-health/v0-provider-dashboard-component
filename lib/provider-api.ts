@@ -22,6 +22,7 @@ export async function providerFetch(path: string, options: RequestInit = {}): Pr
     const failure: unknown = await response.clone().json().catch(() => null)
     assertBrowserScope(scope)
     if (failure && typeof failure === 'object' && 'code' in failure && failure.code === 'signin_verification_required') freshNavigation('/login?expired=1')
+    if (failure && typeof failure === 'object' && 'code' in failure && failure.code === 'consent_required' && !['consent-config', 'me/consents'].includes(path)) window.dispatchEvent(new Event('cozy:consent-required'))
   }
   responseScopes.set(response, scope)
   return response

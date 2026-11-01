@@ -41,10 +41,10 @@ export function ProviderDashboard({ expires }: { expires: number }) {
   const provider = profile.data?.data.provider
   const nav = <nav aria-label="Main navigation" className="flex flex-col gap-1 p-3">{navigation.map(({ name, icon: Icon }) => <Button key={name} variant="ghost" aria-current={view === name ? "page" : undefined} onClick={() => { setView(name); setPatient(null); closeNavigation() }} className={`h-auto min-h-11 justify-start whitespace-normal text-left ${view === name ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}`}><Icon className="size-4 shrink-0" />{name}</Button>)}</nav>
   const account = <div className="mt-auto border-t border-sidebar-border p-4"><p className="break-words text-sm font-medium">{provider?.name || "Provider account"}</p><p className="mb-3 break-words text-xs text-muted-foreground">{provider?.practice}</p><Button className="min-h-11" variant="ghost" onClick={logout} disabled={signingOut}><LogOut className="size-4" />{signingOut ? "Signing out..." : "Sign out"}</Button></div>
-  const brand = <><Image src="/images/cozy-logo.png" alt="Cozy" width={40} height={40} className="shrink-0 rounded-lg" /><div className="min-w-0 flex-1"><p className="text-base font-semibold sm:text-lg">Cozy Health</p><p className="text-xs text-muted-foreground">Provider Dashboard</p></div></>
+  const brand = <><Image src="/images/cozy-logo.png" alt="Cozy" width={40} height={40} className="shrink-0 rounded-lg" /><div className="min-w-0 flex-1 break-words"><p className="text-base font-semibold sm:text-lg">Cozy Health</p><p className="text-xs text-muted-foreground">Provider Dashboard</p></div></>
   return <div className="min-h-screen bg-background lg:flex">
     <Sheet open={open} onOpenChange={setOpen}>
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b bg-card px-4 py-3 lg:hidden"><SheetTrigger asChild><Button variant="outline" size="icon" className="size-11 shrink-0" aria-label="Open navigation"><Menu /></Button></SheetTrigger><div className="flex min-w-0 flex-1 items-center gap-2">{brand}</div><ThemeButton /></header>
+      <header className="sticky top-0 z-30 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-4 py-3 lg:hidden"><div className="col-span-2 flex min-w-0 items-center gap-2">{brand}</div><SheetTrigger asChild><Button variant="outline" size="icon" className="size-11 shrink-0 justify-self-start" aria-label="Open navigation"><Menu /></Button></SheetTrigger><ThemeButton /></header>
       <SheetContent side="left" className="flex h-dvh w-[min(20rem,calc(100%-2rem))] flex-col gap-0 bg-sidebar text-sidebar-foreground">
         <SheetHeader className="border-b pr-16"><SheetTitle>Cozy Health</SheetTitle><SheetDescription>Provider navigation</SheetDescription></SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>{account}
@@ -55,9 +55,8 @@ export function ProviderDashboard({ expires }: { expires: number }) {
       <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>{account}
     </aside>
     <main className="min-w-0 flex-1 max-w-7xl p-4 pb-12 sm:p-6 lg:p-8">
-      {provider && <ConsentNotice key={provider.id} ownerId={provider.id} />}
       <header className="mb-8"><p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cozy Health · Provider portal</p><h1 className="break-words text-2xl font-semibold sm:text-3xl">{view === "Patient messages" ? "Messages" : patient ? "Patient overview" : view}</h1><p className="mt-2 text-sm text-muted-foreground">Patient sharing choices control the information available here.</p></header>
-      {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <>
+      {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <ConsentNotice key={provider.id} ownerId={provider.id}>
         {view === "Patients" && (patient ? <><Button className="mb-4" onClick={() => setView("Patient messages")}>Message patient</Button><PatientView key={patient} id={patient} back={() => setPatient(null)} /></> : <Roster select={setPatient} email={provider.email} />)}
         {view === "Messages" && <Messages />}
         {view === "Patient messages" && <Messages userId={patient ?? undefined} />}
@@ -66,7 +65,7 @@ export function ProviderDashboard({ expires }: { expires: number }) {
         {view === "Shared assessment results" && <QuizInbox />}
         {view === "Audit log" && <AuditLog />}
         {view === "Settings" && <ProviderSettings provider={provider} saved={profile.reload} />}
-      </>}
+      </ConsentNotice>}
     </main>
   </div>
 }

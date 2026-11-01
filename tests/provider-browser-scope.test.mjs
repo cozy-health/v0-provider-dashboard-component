@@ -8,8 +8,8 @@ const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done});
 function browser(fetcher,csrf=()=>Promise.resolve({})){
  const cache=new Map();let cookie='cozy-provider-scope='+'a'.repeat(64)
  const document={get cookie(){return cookie},set cookie(value){cookie=value.split(';')[0]}}
- const navigations=[]
- const window={dispatchEvent(){},location:{origin:'https://dashboard.example.test',replace(url){navigations.push(url)}}}
+ const navigations=[],events=[]
+ const window={dispatchEvent(event){events.push(event.type)},location:{origin:'https://dashboard.example.test',replace(url){navigations.push(url)}}}
  const load=name=>{
   if(cache.has(name))return cache.get(name)
   const exports={};cache.set(name,exports)
@@ -18,7 +18,7 @@ function browser(fetcher,csrf=()=>Promise.resolve({})){
   vm.runInNewContext(compiled,{exports,document,window,location:{protocol:'https:'},crypto:webcrypto,Event,FormData,Response,Headers,URL,BroadcastChannel:undefined,fetch:fetcher,require(name){if(name==='./csrf')return {mutationHeaders:csrf};if(name==='./provider-auth-scope')return load('provider-auth-scope');throw Error('Unexpected dependency '+name)}})
   return exports
  }
- return {api:load('provider-api'),scope:load('provider-auth-scope'),navigations}
+ return {api:load('provider-api'),scope:load('provider-auth-scope'),navigations,events}
 }
 test('changing accounts while JSON is parsed rejects the old response even after a new login updates the module scope',async()=>{
  const read=deferred(),entered=deferred()
@@ -42,4 +42,14 @@ test('security denials redirect downloads as well as JSON requests only for thei
  const h=browser(async()=>Response.json({code:'signin_verification_required',message:'Sign in again.'},{status:403}))
  await h.api.providerFetch('reports/1/pdf')
  assert.equal(h.navigations.length,1);assert.match(h.navigations[0],/\/login\?expired=1$/)
+})
+test('consent denials notify the active gate without logging out or exposing an old-account event',async()=>{
+ const current=browser(async()=>Response.json({code:'consent_required'},{status:403}))
+ await current.api.providerFetch('clients')
+ assert.equal(current.events.includes('cozy:consent-required'),true)
+ assert.equal(current.navigations.length,0)
+ let old
+ old=browser(async()=>{old.scope.beginBrowserSignIn();return Response.json({code:'consent_required'},{status:403})})
+ await assert.rejects(old.api.providerFetch('clients'),/account changed/)
+ assert.equal(old.events.includes('cozy:consent-required'),false)
 })
