@@ -25,6 +25,13 @@ test('admin routes exclude unrelated APIs and unauthorized methods', () => {
   assert.equal(adminRoute('metrics/safety', 'POST'), false)
   assert.equal(adminRoute('auth/register', 'POST'), false)
 })
+
+test('student domain administration allows only scoped list/create/update proxy routes', () => {
+  assert.equal(adminRoute('student-email-domains', 'GET'), true)
+  assert.equal(adminRoute('student-email-domains', 'POST'), true)
+  assert.equal(adminRoute('student-email-domains/12', 'PUT'), true)
+  for (const [path, method] of [['student-email-domains/12', 'DELETE'], ['student-email-domains/12', 'GET'], ['student-email-domains/0', 'PUT'], ['student-email-domains/../users', 'PUT']]) assert.equal(adminRoute(path, method), false)
+})
 test('management routes permit only the implemented resource methods and identifiers', () => {
   for (const [path, method] of [['users', 'GET'], ['community/posts/12345678-1234-1234-1234-123456789abc', 'GET'], ['content/moods', 'POST'], ['content/coping/3', 'DELETE'], ['quizzes/8/publish', 'POST'], ['emails/welcome/preview', 'GET'], ['subscriptions/history', 'GET']]) assert.equal(adminRoute(path, method), true)
   for (const [path, method] of [['users', 'POST'], ['users/12', 'PUT'], ['users/12', 'DELETE'], ['community/posts/'+ '-'.repeat(36), 'GET'], ['content/unknown', 'GET'], ['content/moods/../users', 'PUT'], ['quizzes/1/publish', 'DELETE'], ['settings/test', 'PUT'], ['community/posts/not-a-uuid', 'PUT']]) assert.equal(adminRoute(path, method), false)

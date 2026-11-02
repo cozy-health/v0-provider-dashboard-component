@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url'
 import { createIsolatedTestApp } from './isolated-next-app.mjs'
 
 let capabilities = ['admin:subscriptions'], failures = 0
+let studentDomains = []
 const rows = (data, page = 1, last = 1, total = data.length) => ({ data: { data, current_page: page, last_page: last, total } })
 let packageRow = { id: 1, package_name: 'Original package', slug: 'mobile-ng-student', description: 'Fixture', is_active: true, audience: 'mobile', country_code: 'NG', tier: 'student', price: 5000, currency: 'NGN', currency_decimals: 2, annual_discount: 20, duration: 'monthly', duration_days: 30, features: ['Fixture'], sort_order: 0, version: 'a'.repeat(64), updated_at: '2026-10-01 12:00:00' }
 const backend = createServer(async (request, response) => {
@@ -14,6 +15,20 @@ const backend = createServer(async (request, response) => {
  if (path === 'auth/login') return send({ token: 'admin-repair-fixture', expires_at: new Date(Date.now() + 1800000).toISOString() })
  if (path === 'auth/session') return send({ role: 'admin', name: 'Repair reviewer', capabilities })
  if (path === 'student-applications') return send(rows([]))
+ if (path === 'student-email-domains' && request.method === 'GET') return send(rows(studentDomains))
+ if (path === 'student-email-domains' && request.method === 'POST') {
+  let raw = ''; for await (const chunk of request) raw += chunk
+  const body = JSON.parse(raw); assert.equal(body.student_only_confirmed, true)
+  studentDomains = [{ id: 1, domain: body.domain.toLowerCase(), institution: body.institution, enabled: true, version: 1 }]
+  response.statusCode = 201; return send({ data: studentDomains[0] })
+ }
+ if (path === 'student-email-domains/1' && request.method === 'PUT') {
+  let raw = ''; for await (const chunk of request) raw += chunk
+  const body = JSON.parse(raw), row = studentDomains[0]
+  if (body.version !== row.version) { response.statusCode = 409; return send({ message: 'Domain changed' }) }
+  studentDomains = [{ ...row, enabled: body.enabled, version: row.version + 1 }]
+  return send({ data: studentDomains[0] })
+ }
  if (path === 'operations/summary') return send({ data: { totals: {}, attention: [], activity: [], checked_at: new Date().toISOString() } })
  if (path.startsWith('metrics/')) {
   const meta = { release: '2026-10-01', timezone: 'UTC', window: { from: '2026-09-01', to_exclusive: '2026-10-01' } }
@@ -131,6 +146,66 @@ try {
   assert.equal(await page.getByRole('link', { name: 'Download private enrolment evidence', exact: true }).count(), 0)
   assert.equal(await page.getByRole('button', { name: 'Review application', exact: true }).count(), 0)
  })
+ await check('A delayed Student decision refreshes the current page without restoring old rows', async () => {
+  const first = { id: '11111111-1111-4111-8111-111111111111', institution: 'First page student', status: 'pending', institution_email: null, email_verified_at: null, eligible_until: null, evidence_available: true, evidence_cleanup_pending: false, review_note: null }
+  const second = { ...first, id: '22222222-2222-4222-8222-222222222222', institution: 'Second page student' }
+  let releaseReview, resolveStarted, resolveReload
+  const reviewGate = new Promise(resolve => { releaseReview = resolve })
+  const reviewStarted = new Promise(resolve => { resolveStarted = resolve })
+  const listReloaded = new Promise(resolve => { resolveReload = resolve })
+  let reviewed = false
+  const handler = async route => {
+   if (route.request().method() === 'POST') {
+    resolveStarted(); await reviewGate; reviewed = true
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ application: { ...first, status: 'rejected', evidence_available: false }, evidence_deleted: true }) })
+   }
+   const pageNumber = Number(new URL(route.request().url()).searchParams.get('page') || '1')
+   await route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows([pageNumber === 2 ? second : { ...first, status: reviewed ? 'rejected' : 'pending' }], pageNumber, 2, 21)) })
+   if (reviewed) resolveReload()
+  }
+  await page.route('**/api/admin/student-applications**', handler)
+  try {
+   await page.goto(origin + '/admin/manage/student-applications')
+   await page.getByRole('heading', { name: 'First page student', exact: true }).waitFor()
+   await page.getByRole('button', { name: 'Review application', exact: true }).click()
+   await page.getByLabel('Decision reason (shown to the student)', { exact: true }).fill('Please provide current registration evidence.')
+   await page.getByRole('button', { name: 'Reject and delete evidence', exact: true }).click()
+   await reviewStarted
+   await page.getByRole('button', { name: 'Next', exact: true }).click()
+   await page.getByRole('heading', { name: 'Second page student', exact: true }).waitFor()
+   releaseReview(); await listReloaded
+   await page.getByText('Decision saved. The evidence document was deleted.', { exact: true }).waitFor()
+   await page.getByText('Loading student applications…', { exact: true }).waitFor({ state: 'hidden' })
+   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+   assert.equal(await page.getByRole('heading', { name: 'Second page student', exact: true }).count(), 1)
+   assert.equal(await page.getByRole('heading', { name: 'First page student', exact: true }).count(), 0)
+   assert.equal(await page.getByText('Page 2 of 2', { exact: true }).count(), 1)
+  } finally { releaseReview(); await page.unroute('**/api/admin/student-applications**', handler) }
+ })
+ await check('A conflicting Student decision reload closes the stale review form', async () => {
+  const initial = { id: '33333333-3333-4333-8333-333333333333', institution: 'Concurrent review student', status: 'pending', institution_email: null, email_verified_at: null, eligible_until: null, evidence_available: true, evidence_cleanup_pending: false, review_note: null }
+  let decided = false
+  const handler = async route => {
+   if (route.request().method() === 'POST') {
+    decided = true
+    return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ message: 'Another reviewer already decided this application.' }) })
+   }
+   return route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows([{ ...initial, status: decided ? 'approved' : 'pending', evidence_available: !decided, review_note: decided ? 'Current registration confirmed by another reviewer.' : null }])) })
+  }
+  await page.route('**/api/admin/student-applications**', handler)
+  try {
+   await page.goto(origin + '/admin/manage/student-applications')
+   await page.getByRole('button', { name: 'Review application', exact: true }).click()
+   const note = page.getByLabel('Decision reason (shown to the student)', { exact: true })
+   await note.fill('Please provide a newer registration record.')
+   await page.getByRole('button', { name: 'Reject and delete evidence', exact: true }).click()
+   await page.getByRole('button', { name: 'Retry applications', exact: true }).click()
+   await page.getByText('Current registration confirmed by another reviewer.', { exact: false }).waitFor()
+   assert.equal(await page.getByLabel('Decision reason (shown to the student)', { exact: true }).count(), 0)
+   assert.equal(await page.getByRole('button', { name: 'Review application', exact: true }).count(), 0)
+   assert.equal(await page.getByRole('link', { name: 'Download private enrolment evidence', exact: true }).count(), 0)
+  } finally { await page.unroute('**/api/admin/student-applications**', handler) }
+ })
  await check('Cozy Moods uses the matching original mobile illustrations', async () => {
   const moods = ['angry', 'sad', 'good', 'upset', 'spectacular', 'happy']
   await page.route('**/api/admin/content/moods?*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows(moods.map((slug, index) => ({ id: index + 1, slug, name: slug, description: 'Fixture mood', is_active: true })))) }))
@@ -141,6 +216,31 @@ try {
    assert.equal(await image.getAttribute('src'), `/images/moods/${mood}.png`)
    await image.evaluate(element => element.decode())
   }
+ })
+ await check('Student domains require attestation and recover from stale admin changes', async () => {
+  await page.goto(origin + '/admin/manage/student-applications')
+  await page.getByText('No approved domains. Document review remains available.', { exact: true }).waitFor()
+  await page.getByLabel('Student-only domain', { exact: true }).fill('students.synthetic.example')
+  await page.getByLabel('Institution name', { exact: true }).fill('Synthetic College')
+  const approve = page.getByRole('button', { name: 'Approve student domain', exact: true })
+  assert.equal(await approve.isDisabled(), true)
+  await page.getByLabel('I confirmed that this domain is issued only to students.', { exact: true }).check()
+  await approve.click()
+  await page.getByText('Student-only domain approved. Verified ownership is still required.', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Disable students.synthetic.example', exact: true }).waitFor()
+  studentDomains[0].version += 1
+  await page.getByRole('button', { name: 'Disable students.synthetic.example', exact: true }).click()
+  await page.getByRole('button', { name: 'Refresh student domains', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Refresh student domains', exact: true }).click()
+  await page.getByRole('button', { name: 'Disable students.synthetic.example', exact: true }).click()
+  await page.getByRole('button', { name: 'Enable students.synthetic.example', exact: true }).waitFor()
+  await page.setViewportSize({ width: 320, height: 800 })
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%' })
+  await page.getByRole('heading', { name: 'Approved student email domains', exact: true }).scrollIntoViewIfNeeded()
+  const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')].filter(element => element.getBoundingClientRect().right > window.innerWidth + 1).map(element => ({ tag: element.tagName, text: element.textContent?.slice(0, 65), width: element.getBoundingClientRect().width, class: element.className })).slice(-12))
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, JSON.stringify(overflow))
+  await page.evaluate(() => { document.documentElement.style.fontSize = '' })
+  await page.setViewportSize({ width: 1440, height: 1000 })
  })
  assert.deepEqual(errors, [])
 } finally {
