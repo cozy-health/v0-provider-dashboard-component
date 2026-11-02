@@ -37,7 +37,13 @@ const backend = createServer(async (request, response) => {
   if (request.method === 'PUT') { coping[0] = { ...coping[0], ...body }; return send(200, {}) }
   if (request.method === 'DELETE') { coping[0].is_active = false; return send(200, {}) }
  }
- if (path === 'quizzes' && request.method === 'POST') { quizzes.push({ id: 1, ...body, status: 'draft' }); return send(201, {}) }
+ if (path === 'quizzes/preview') {
+  assert.equal(request.method, 'POST')
+  assert.equal(body.definition.slug, 'synthetic-preview')
+  const score = body.answers.reduce((total, option, index) => total + body.definition.questions[index].options[option].score, 0)
+  return send(200, { data: { score, maximum_score: 1, interpretation: 'Synthetic band', recommendation: 'Synthetic recommendation', disclaimer: body.definition.disclaimer, is_crisis_flagged: false } })
+ }
+ if (path === 'quizzes' && request.method === 'POST') { quizzes.push({ id: 1, ...body, status: 'draft', version: 'a'.repeat(64) }); return send(201, {}) }
  if (/^quizzes\/1\/publish$/.test(path)) { quizzes[0].status = 'published'; return send(200, {}) }
  const rows = path === 'content/coping' ? coping : path === 'quizzes' ? quizzes : path === 'users' ? [{ id: 1, name: 'Test Person', email: 'person@example.test', is_active: true }] : []
  if (request.method === 'GET') return send(200, { data: { data: rows, current_page: 1, last_page: 1, total: rows.length }, ...(path === 'emails' ? { events: [{ id: 'welcome', name: 'Account registration' }], queue: { depth: 0, oldest_job_age_seconds: 0 } } : {}) })
@@ -56,7 +62,7 @@ try {
  const origin = `http://127.0.0.1:${server.address().port}`
  process.env.ADMIN_DASHBOARD_ORIGIN = origin
  const playwright = await import(pathToFileURL(process.env.ADMIN_PLAYWRIGHT_PATH).href)
- browser = await playwright.chromium.launch({ headless: true })
+ browser = await playwright.chromium.launch({ headless: true, ...(process.env.ADMIN_CHROMIUM_PATH ? { executablePath: process.env.ADMIN_CHROMIUM_PATH } : {}) })
  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }), errors = []
  // Navigation and route assertions include cold development compilation on CI.
  page.setDefaultNavigationTimeout(120000)
@@ -77,7 +83,7 @@ try {
  }
  const links = navigation.getByRole('link')
  assert.equal(await navigation.locator('a .admin-icon svg').count(), await links.count())
- for (const label of ['Users', 'Cozy Moods', 'Mood Triggers', 'Cozy Quizzes', 'Email Triggers']) {
+ for (const label of ['Users', 'Cozy Moods', 'Mood Triggers', 'Cozy Assessments', 'Email Triggers']) {
    assert.equal(await navigation.getByRole('link', { name: label, exact: true }).locator('.admin-icon[aria-hidden="true"]').count(), 1)
  }
  await navigation.getByRole('link', { name: 'Overview', exact: true }).focus()
@@ -128,14 +134,41 @@ try {
  page.once('dialog', dialog => dialog.accept())
  await page.getByRole('button', { name: 'Archive', exact: true }).click()
  await page.getByText('Inactive', { exact: true }).waitFor()
- await page.getByRole('link', { name: 'Cozy Quizzes', exact: true }).click()
+ await page.getByRole('link', { name: 'Cozy Assessments', exact: true }).click()
  await page.getByText('There are no records to display', { exact: true }).waitFor()
  await page.screenshot({ path: '../docs/validation/admin-phases/quiz-management-light.png', fullPage: true })
- await page.getByRole('button', { name: 'Create Quiz', exact: true }).click()
+ await page.getByRole('button', { name: 'Create Assessment', exact: true }).click()
+ const syntheticDefinition = { title: 'Synthetic preview', slug: 'synthetic-preview', type: 'wellness', description: 'Engineering fixture only', estimated_minutes: 1,
+  disclaimer: 'Not approved for use outside automated tests.', scoring_rules: { timeframe: 'Today', provenance: { license: 'Original synthetic fixture', approval_reference: 'Automated test only' }, bands: [{ max: 1, label: 'Synthetic band', recommendation: 'Synthetic recommendation' }] },
+  questions: [{ question: 'Synthetic question?', options: [{ label: 'Zero', score: 0 }, { label: 'One', score: 1 }] }] }
+ await page.locator('input[type="file"]').setInputFiles({ name: 'synthetic.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(syntheticDefinition)) })
+ await page.getByRole('heading', { name: 'Synthetic preview', exact: true }).waitFor()
+ assert.equal(await page.getByRole('button', { name: 'Calculate preview result' }).isDisabled(), true)
+ await page.getByRole('radio', { name: 'One', exact: true }).check()
+ await page.getByRole('button', { name: 'Calculate preview result' }).click()
+ await page.getByText('Score: 1 / 1', { exact: true }).waitFor()
+ await page.getByRole('radio', { name: 'Zero', exact: true }).check()
+ assert.equal(await page.getByText('Score: 1 / 1', { exact: true }).count(), 0)
+ await page.getByRole('button', { name: 'Calculate preview result' }).click()
+ await page.getByText('Score: 0 / 1', { exact: true }).waitFor()
+ await page.setViewportSize({ width: 320, height: 900 })
+ await page.evaluate(() => { document.documentElement.style.fontSize = '200%' })
+ await mkdir('scratch/p07', { recursive: true })
+ await page.getByText('Score: 0 / 1', { exact: true }).scrollIntoViewIfNeeded()
+ await page.screenshot({ path: 'scratch/p07/scored-preview-320-large-text.png', fullPage: true })
+ const dialogWidth = await page.getByRole('dialog').evaluate(dialog => ({ width: dialog.clientWidth, scroll: dialog.scrollWidth, pageWidth: document.documentElement.scrollWidth, viewport: innerWidth,
+  overflow: [...dialog.querySelectorAll('*')].filter(element => element.getBoundingClientRect().right > dialog.getBoundingClientRect().right + 1)
+   .slice(0, 12).map(element => ({ tag: element.tagName, classes: element.className, width: element.getBoundingClientRect().width, text: element.textContent?.slice(0, 50) })) }))
+ assert.equal(dialogWidth.scroll <= dialogWidth.width + 1, true, JSON.stringify(dialogWidth))
+ assert.equal(dialogWidth.pageWidth <= dialogWidth.viewport, true, JSON.stringify(dialogWidth))
+ await page.evaluate(() => { document.documentElement.style.fontSize = '' })
+ await page.setViewportSize({ width: 1440, height: 1000 })
+ await page.getByRole('button', { name: 'Edit questions', exact: true }).click()
  await page.getByRole('button', { name: 'Preview quiz', exact: true }).click()
- await page.getByRole('heading', { name: 'Daily wellbeing check', exact: true }).waitFor()
+ await page.getByRole('heading', { name: 'Synthetic preview', exact: true }).waitFor()
  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
  await page.locator('tbody').getByText('draft', { exact: true }).waitFor()
+ page.once('dialog', dialog => dialog.accept())
  await page.getByRole('button', { name: 'Publish', exact: true }).click()
  await page.locator('tbody').getByText('published', { exact: true }).waitFor()
  await page.getByRole('link', { name: 'Users', exact: true }).click()

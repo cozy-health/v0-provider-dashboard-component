@@ -20,6 +20,8 @@ test('admin cookie encryption is isolated from provider even if keys coincide', 
   assert.equal(openAdmin(sealAdmin({ ...session, expires: 0 })), null)
 })
 test('admin routes exclude unrelated APIs and unauthorized methods', () => {
+  assert.equal(adminRoute('quizzes/preview', 'POST'), true)
+  for (const method of ['GET', 'PUT', 'DELETE']) assert.equal(adminRoute('quizzes/preview', method), false)
   assert.ok(adminRoute('metrics/overview', 'GET'))
   for (const path of ['clients', 'me', 'settings', 'metrics/analytics', '../provider/clients']) assert.equal(adminRoute(path, 'GET'), false)
   assert.equal(adminRoute('metrics/safety', 'POST'), false)

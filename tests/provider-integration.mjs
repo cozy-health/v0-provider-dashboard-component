@@ -59,6 +59,7 @@ const backend = createServer(async (request, response) => {
     return send({ owner_id: provider.id, data: documentConsents })
   }
   if (path === 'me') { if (request.method === 'PATCH') Object.assign(provider, JSON.parse(body)); return send({ data: { provider } }) }
+  if (path === 'overview') return send({ data: { checked_at: '2026-11-02T10:00:00Z', totals: { connected_patients: linked && !rosterEmpty ? 1 : 0, unread_messages: 0, shared_assessments: linked && consent.quizzes && quizShareActive ? 1 : 0 } } })
   if (path === 'clients') return send(rosterEmpty ? [] : [client()])
   if (path === 'quiz-shares') return send(paginated(linked && consent.quizzes && quizShareActive ? [{ id: 1, user_id: 10, sender: 'Test', quiz_title: 'Fixture shared assessment', completed_at: '2026-10-09T10:00:00Z', read_at: quizShareRead ? '2026-10-10T10:00:00Z' : null }] : []))
   if (path === 'quiz-shares/1') {
@@ -187,11 +188,20 @@ try {
     await page.getByLabel('Email', { exact: true }).fill(provider.email)
     await page.getByLabel('Password', { exact: true }).fill('test-password')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
+    await page.getByRole('heading', { name: 'Connected patients', exact: true }).waitFor()
+    assert.equal(await page.getByRole('heading', { name: 'Connected patients', exact: true }).locator('..').getByText('1', { exact: true }).count(), 1)
+    await reviewThemes(page, 'provider-overview')
+    await page.getByRole('button', { name: 'View patients', exact: true }).click()
     await page.getByRole('button', { name: 'View patient' }).waitFor()
     await page.goto(origin)
+    await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'View patients', exact: true }).click()
     await page.getByRole('button', { name: 'View patient' }).waitFor()
     await reviewThemes(page, 'provider-root')
     await page.goto(`${origin}/provider`)
+    await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'View patients', exact: true }).click()
     await page.getByRole('button', { name: 'View patient' }).waitFor()
     await reviewThemes(page, 'provider-alias')
     assert.equal(new URL(page.url()).pathname, '/provider')

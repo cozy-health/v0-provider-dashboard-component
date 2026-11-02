@@ -54,7 +54,7 @@ export function adminRoute(path: string, method: string) {
   if (method === "PUT" && /^community\/(posts|comments)\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
   if (method === "DELETE" && /^community\/members\/\d+$/.test(path)) return true
   if (method === "GET") return /^(operations\/summary|auth\/session|metrics\/(overview|usage|retention|safety|insights)|users|quizzes|reports|support|subscriptions|emails|emails\/[a-z-]+\/preview|(?:reports|support)\/\d+|reports\/\d+\/target)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
-  if (method === "POST") return /^(auth\/(login|logout)|quizzes|quizzes\/\d+\/publish|emails\/test)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
+  if (method === "POST") return /^(auth\/(login|logout)|quizzes|quizzes\/preview|quizzes\/\d+\/publish|emails\/test)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
   if (method === "PUT") return /^(quizzes|reports|support)\/\d+$/.test(path) || new RegExp(`^${catalog}/\\d+$`).test(path)
   if (method === "DELETE") return /^(quizzes)\/\d+$/.test(path) || new RegExp(`^${catalog}/\\d+$`).test(path)
   return false
