@@ -37,6 +37,11 @@ export function validAdminOrigin(request: Request) {
   return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1" && validCsrf(request)
 }
 export function adminRoute(path: string, method: string) {
+  const uuid = "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
+  if (method === "GET" && /^support\/[1-9][0-9]*\/thread$/.test(path)) return true
+  if (method === "POST" && (/^support\/[1-9][0-9]*\/replies$/.test(path) || new RegExp(`^support/[1-9][0-9]*/messages/${uuid}/retry$`).test(path))) return true
+  if (method === "GET" && (path === "privacy-requests" || new RegExp(`^privacy-requests/${uuid}$`).test(path))) return true
+  if (method === "POST" && new RegExp(`^privacy-requests/${uuid}/process$`).test(path)) return true
   if (["GET", "POST"].includes(method) && path === "student-email-domains") return true
   if (method === "PUT" && /^student-email-domains\/[1-9][0-9]*$/.test(path)) return true
   if (["GET", "POST"].includes(method) && path === "development-access") return true

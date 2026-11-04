@@ -7,6 +7,11 @@ import { createRequire } from 'node:module'
 import { sealAdmin, openAdmin, adminRoute, validAdminOrigin, adminBase } from '../lib/admin-session.ts'
 import { sealSession } from '../lib/provider-session.ts'
 const require = createRequire(import.meta.url)
+test('support and privacy proxy operations have explicit paths and methods', () => {
+  const id = '12345678-1234-1234-1234-123456789abc'
+  for (const [path, method] of [['support/1/thread', 'GET'], ['support/1/replies', 'POST'], [`support/1/messages/${id}/retry`, 'POST'], ['privacy-requests', 'GET'], [`privacy-requests/${id}`, 'GET'], [`privacy-requests/${id}/process`, 'POST']]) assert.equal(adminRoute(path, method), true)
+  for (const [path, method] of [['support/1/replies', 'GET'], ['support/0/replies', 'POST'], ['support/1/messages/not-a-uuid/retry', 'POST'], ['privacy-requests', 'POST'], [`privacy-requests/${id}/download`, 'GET'], [`privacy-requests/${id}/process`, 'DELETE'], ['privacy-requests/../users', 'GET']]) assert.equal(adminRoute(path, method), false)
+})
 process.env.ADMIN_SESSION_SECRET = randomBytes(32).toString('hex')
 process.env.PROVIDER_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET
 process.env.ADMIN_DASHBOARD_ORIGIN = 'https://admin.example.test'
