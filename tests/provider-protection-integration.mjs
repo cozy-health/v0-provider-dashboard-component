@@ -24,6 +24,10 @@ const backend=createServer(async(req,res)=>{
   if(endpoint==='auth/security'&&req.method==='PUT'){assert.equal(body.security_settings_token,'1'.repeat(64));enrolled=true;method=body.method;return send({data:{enabled:true,enrolled,method,questions}})}
   if(endpoint==='auth/security/reauthenticate'){assert.equal(body.password,'FixturePassword123');settings=true;return send({data:challenge('settings')})}
   if(endpoint==='auth/logout')return send({data:{}})
+  if(endpoint==='overview'){
+   privateCalls++;assert.ok(enrolled);assert.equal(req.headers.authorization,'Bearer fixture-provisional')
+   return send({message:'Provider verification is required.'},403)
+  }
   if(['me','clients'].includes(endpoint)){
    privateCalls++;assert.ok(enrolled);assert.equal(req.headers.authorization,'Bearer fixture-provisional')
    return send(endpoint==='me'?{data:{provider}}:[])
@@ -47,6 +51,14 @@ try{
  const context=await browser.newContext({viewport:{width:390,height:844}})
  await context.routeWebSocket('**/_next/webpack-hmr**',()=>{})
  const page=await context.newPage(),errors=[]
+ async function openPatientsFromOverview(){
+  await page.getByRole('heading',{name:'Overview',exact:true}).waitFor()
+  await page.getByRole('alert').getByText('Provider verification is required.',{exact:true}).waitFor()
+  const navigation=page.getByRole('button',{name:'Patients',exact:true})
+  if(!await navigation.isVisible())await page.getByRole('button',{name:'Open navigation',exact:true}).click()
+  await navigation.click()
+  await page.getByText(/No linked patients yet/).waitFor()
+ }
  page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(120000)
  await page.goto(origin+'/login');await page.getByLabel('Email',{exact:true}).fill(provider.email);await page.getByLabel('Password',{exact:true}).fill('FixturePassword123');await page.getByRole('button',{name:'Sign in',exact:true}).click()
  await page.getByRole('heading',{name:'Sign-in protection',exact:true}).waitFor()
@@ -63,7 +75,7 @@ try{
  await page.getByRole('button',{name:'Save sign-in protection',exact:true}).click();await page.getByRole('button',{name:'Continue with saved protection',exact:true}).waitFor()
  assert.equal(privateCalls,0)
  await page.getByRole('button',{name:'Continue with saved protection',exact:true}).click()
- await page.getByText(/No linked patients yet/).waitFor()
+ await openPatientsFromOverview()
  const cookies=await context.cookies(),scope=cookies.find(c=>c.name==='cozy-provider-scope')?.value
  const session=cookies.find(c=>c.name==='cozy-provider.'+scope)
  assert.ok(session?.httpOnly);assert.ok(session?.value)
@@ -77,7 +89,7 @@ try{
  await page.getByLabel('Current password',{exact:true}).fill('FixturePassword123');await page.getByRole('button',{name:'Send verification code',exact:true}).click()
  await page.getByLabel('Six-digit email code').fill('123456');await page.getByRole('button',{name:'Verify and continue',exact:true}).click()
  await page.getByRole('button',{name:'Email code',exact:true}).click();await page.getByRole('button',{name:'Save sign-in protection',exact:true}).click();await page.getByRole('button',{name:'Continue with saved protection',exact:true}).click()
- await page.getByText(/No linked patients yet/).waitFor();assert.equal(method,'email')
+ await openPatientsFromOverview();assert.equal(method,'email')
  assert.equal((await context.cookies()).find(c=>c.name===session.name)?.value,session.value)
  await page.goto(origin+'/provider/security');await page.getByRole('button',{name:'Confirm identity',exact:true}).waitFor()
  await page.setViewportSize({width:320,height:740});await page.emulateMedia({colorScheme:'dark'})

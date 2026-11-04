@@ -26,6 +26,7 @@ const backend = createServer(async (request, response) => {
  }
  if (request.headers.authorization !== 'Bearer fixture-provider-token') return send({ message: 'Unauthenticated.' }, 401)
  if (path === 'me') return send({ data: { provider } })
+ if (path === 'overview') return send({ message: 'Provider verification is required.' }, 403)
  if (path === 'consent-config') return send({ consent: { enforce_blocking: false, documents: {} } })
  if (path === 'me/consents') return send({ owner_id: 1, data: [] })
  if (path === 'clients') return send(patients)
@@ -97,6 +98,15 @@ try {
  await page.getByRole('button', { name: 'Create account', exact: true }).click()
  const response = await registered; assert.equal(response.status(), 201)
  assert.ok(!registrationBody.includes('fixture-provider-token')); assert.ok(!registrationBody.includes('fixture-refresh-secret'))
+ await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
+ await page.getByRole('alert').getByText('Provider verification is required.', { exact: true }).waitFor()
+ async function openPatients() {
+  await page.getByRole('button', { name: /^(Patients|Open navigation)$/ }).filter({ visible: true }).first().waitFor()
+  const navigation = page.getByRole('button', { name: 'Patients', exact: true })
+  if (!await navigation.isVisible()) await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+  await navigation.click()
+ }
+ await openPatients()
  await page.getByText(/No linked patients yet/).waitFor()
  assert.equal(registrations, 1)
  const currentScope = (await context.cookies()).find(cookie => cookie.name === 'cozy-provider-scope')?.value
@@ -105,6 +115,8 @@ try {
  assert.ok(!(await page.evaluate(() => document.cookie)).includes('fixture-provider-token'))
  assert.ok(!(await page.evaluate(() => document.cookie)).includes('cozy-provider.' + currentScope + '='))
  await reviewThemes(page, 'provider-empty')
+ await openPatients()
+ await page.getByText(/No linked patients yet/).waitFor()
  await page.screenshot({ path: '../docs/validation/provider-onboarding/empty-roster.png', fullPage: true })
  await page.getByRole('button', { name: 'Accept patient invitation', exact: true }).click()
  await page.getByLabel('Patient connection code').fill('000000')
@@ -127,6 +139,8 @@ try {
  await page.getByRole('button', { name: 'Agree & connect' }).click()
  await page.getByRole('button', { name: 'View patient', exact: true }).waitFor()
  await reviewThemes(page, 'provider-populated')
+ await openPatients()
+ await page.getByRole('button', { name: 'View patient', exact: true }).waitFor()
  assert.equal(confirmations, 1)
  await page.setViewportSize({ width: 390, height: 844 })
  await page.getByRole('button', { name: 'Accept patient invitation', exact: true }).click()
