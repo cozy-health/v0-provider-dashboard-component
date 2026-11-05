@@ -7,6 +7,13 @@ import { createRequire } from 'node:module'
 import { sealAdmin, openAdmin, adminRoute, validAdminOrigin, adminBase } from '../lib/admin-session.ts'
 import { sealSession } from '../lib/provider-session.ts'
 const require = createRequire(import.meta.url)
+
+test('school request review proxy restricts methods and identifiers', () => {
+  const id = '12345678-1234-1234-1234-123456789abc'
+  assert.equal(adminRoute('student-school-requests', 'GET'), true)
+  assert.equal(adminRoute(`student-school-requests/${id}/review`, 'POST'), true)
+  for (const [path, method] of [['student-school-requests', 'POST'], [`student-school-requests/${id}/review`, 'GET'], ['student-school-requests/not-a-uuid/review', 'POST'], ['student-school-requests/../users', 'GET']]) assert.equal(adminRoute(path, method), false)
+})
 test('support and privacy proxy operations have explicit paths and methods', () => {
   const id = '12345678-1234-1234-1234-123456789abc'
   for (const [path, method] of [['support/1/thread', 'GET'], ['support/1/replies', 'POST'], [`support/1/messages/${id}/retry`, 'POST'], ['privacy-requests', 'GET'], [`privacy-requests/${id}`, 'GET'], [`privacy-requests/${id}/process`, 'POST']]) assert.equal(adminRoute(path, method), true)

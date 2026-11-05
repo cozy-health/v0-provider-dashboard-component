@@ -7,6 +7,7 @@ import { createIsolatedTestApp } from './isolated-next-app.mjs'
 
 let capabilities = ['admin:subscriptions'], failures = 0
 let studentDomains = []
+let schoolRequest = { id: '12345678-1234-1234-1234-123456789abc', domain: 'school.synthetic.example', institution: 'Synthetic Nigerian School', website: 'https://school.synthetic.example', status: 'pending' }
 const rows = (data, page = 1, last = 1, total = data.length) => ({ data: { data, current_page: page, last_page: last, total } })
 let packageRow = { id: 1, package_name: 'Original package', slug: 'mobile-ng-student', description: 'Fixture', is_active: true, audience: 'mobile', country_code: 'NG', tier: 'student', price: 5000, currency: 'NGN', currency_decimals: 2, annual_discount: 20, duration: 'monthly', duration_days: 30, features: ['Fixture'], sort_order: 0, version: 'a'.repeat(64), updated_at: '2026-10-01 12:00:00' }
 const backend = createServer(async (request, response) => {
@@ -14,11 +15,17 @@ const backend = createServer(async (request, response) => {
  const send = value => { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(value)) }
  if (path === 'auth/login') return send({ token: 'admin-repair-fixture', expires_at: new Date(Date.now() + 1800000).toISOString() })
  if (path === 'auth/session') return send({ role: 'admin', name: 'Repair reviewer', capabilities })
+ if (path === 'student-school-requests' && request.method === 'GET') return send(rows([schoolRequest]))
+ if (path === `student-school-requests/${schoolRequest.id}/review` && request.method === 'POST') {
+  let raw = ''; for await (const chunk of request) raw += chunk
+  const body = JSON.parse(raw); assert.equal(body.nigerian_tertiary_confirmed, true); assert.equal(body.institution_type, 'university'); assert.equal(body.decision, 'approved'); assert.ok(body.note.length >= 5)
+  schoolRequest = { ...schoolRequest, status: body.decision }; return send({ message: 'School request reviewed.' })
+ }
  if (path === 'student-applications') return send(rows([]))
  if (path === 'student-email-domains' && request.method === 'GET') return send(rows(studentDomains))
  if (path === 'student-email-domains' && request.method === 'POST') {
   let raw = ''; for await (const chunk of request) raw += chunk
-  const body = JSON.parse(raw); assert.equal(body.student_only_confirmed, true)
+  const body = JSON.parse(raw); assert.equal(body.nigerian_tertiary_confirmed, true)
   studentDomains = [{ id: 1, domain: body.domain.toLowerCase(), institution: body.institution, enabled: true, version: 1 }]
   response.statusCode = 201; return send({ data: studentDomains[0] })
  }
@@ -62,6 +69,19 @@ try {
  await check('Student navigation follows subscriptions permission', async () => {
   await page.goto(origin + '/admin/manage/student-applications')
   assert.equal(await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('link', { name: 'Student Verification', exact: true }).count(), 1)
+ })
+ await check('School domain review uses scoped proxy and preserves mailbox verification requirement', async () => {
+  const section = page.locator('section[aria-labelledby="school-requests-heading"]')
+  await section.getByRole('heading', { name: 'Synthetic Nigerian School' }).waitFor()
+  await section.getByLabel('Decision', { exact: true }).selectOption('approved')
+  await section.getByLabel('Institution type', { exact: true }).selectOption('university')
+  await section.getByRole('checkbox').check()
+  await section.getByLabel('Decision reason and source references').fill('Official Nigerian registry and school email policy checked')
+  await section.getByRole('button', { name: 'Save school decision' }).click()
+  await section.getByText('Decision saved. Students must still verify their own school mailbox.').waitFor()
+  assert.equal(schoolRequest.status, 'approved')
+  assert.equal(await section.getByRole('button', { name: 'Save school decision' }).count(), 0)
+  assert.ok((await section.innerText()).includes('team@cozyhealth.org and cozyhealth.hq@gmail.com'))
  })
  capabilities = ['admin:content', 'admin:moderation']
  await check('Content-only staff do not see Student review or package administration', async () => {
@@ -219,14 +239,14 @@ try {
  })
  await check('Student domains require attestation and recover from stale admin changes', async () => {
   await page.goto(origin + '/admin/manage/student-applications')
-  await page.getByText('No approved domains. Document review remains available.', { exact: true }).waitFor()
-  await page.getByLabel('Student-only domain', { exact: true }).fill('students.synthetic.example')
+  await page.getByText('No exception or blocked domains. Institutional .edu.ng email verification remains available.', { exact: true }).waitFor()
+  await page.getByLabel('Nigerian academic domain', { exact: true }).fill('students.synthetic.example')
   await page.getByLabel('Institution name', { exact: true }).fill('Synthetic College')
-  const approve = page.getByRole('button', { name: 'Approve student domain', exact: true })
+  const approve = page.getByRole('button', { name: 'Save domain policy', exact: true })
   assert.equal(await approve.isDisabled(), true)
-  await page.getByLabel('I confirmed that this domain is issued only to students.', { exact: true }).check()
+  await page.getByLabel('I confirmed Nigerian tertiary status and ownership of this email domain. Mailbox ownership does not prove current enrollment.', { exact: true }).check()
   await approve.click()
-  await page.getByText('Student-only domain approved. Verified ownership is still required.', { exact: true }).waitFor()
+  await page.getByText('Nigerian tertiary domain approved. Verified ownership is still required.', { exact: true }).waitFor()
   await page.getByRole('button', { name: 'Disable students.synthetic.example', exact: true }).waitFor()
   studentDomains[0].version += 1
   await page.getByRole('button', { name: 'Disable students.synthetic.example', exact: true }).click()

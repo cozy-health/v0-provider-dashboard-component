@@ -51,7 +51,7 @@ export function StudentReview() {
     finally { if (mounted.current) setBusy(false) }
   }
   return <section className="min-w-0 space-y-6 break-words p-6 [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal"><h1 className="text-3xl font-semibold">Student verification</h1><p className="max-w-2xl text-muted-foreground">Review current-term enrolment letters, registration records or student IDs showing current validity. Verified ownership of an approved student-only email domain provides a separate automatic route. Do not copy evidence into review notes or download it onto shared devices. Eligibility lasts 12 months.</p>
-    <p className="max-w-2xl text-sm text-muted-foreground">Submitted applications are locked. Evidence is deleted after approval or rejection, or after 14 days without a decision. Students can submit fresh evidence after rejection; renewal opens 30 days before expiry and preserves the existing period. Verification does not grant a paid subscription.</p>
+    <p className="max-w-2xl text-sm text-muted-foreground">New applicants verify Nigerian academic email; document submissions are disabled at launch. Historical document applications remain locked and evidence is deleted after a decision or 14 days. Eligibility renewal opens 30 days before expiry and never grants a paid subscription.</p>
     {notice && <p role="status">{notice}</p>}
     {error && <div role="alert"><p>{error}</p><Button variant="outline" onClick={() => load()}>Retry applications</Button></div>}
     {loading && <p role="status">Loading student applications…</p>}

@@ -42,6 +42,8 @@ export function adminRoute(path: string, method: string) {
   if (method === "POST" && (/^support\/[1-9][0-9]*\/replies$/.test(path) || new RegExp(`^support/[1-9][0-9]*/messages/${uuid}/retry$`).test(path))) return true
   if (method === "GET" && (path === "privacy-requests" || new RegExp(`^privacy-requests/${uuid}$`).test(path))) return true
   if (method === "POST" && new RegExp(`^privacy-requests/${uuid}/process$`).test(path)) return true
+  if (method === "GET" && path === "student-school-requests") return true
+  if (method === "POST" && new RegExp(`^student-school-requests/${uuid}/review$`).test(path)) return true
   if (["GET", "POST"].includes(method) && path === "student-email-domains") return true
   if (method === "PUT" && /^student-email-domains\/[1-9][0-9]*$/.test(path)) return true
   if (["GET", "POST"].includes(method) && path === "development-access") return true
