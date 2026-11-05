@@ -59,6 +59,7 @@ export function allowedRoute(path: string, method: string) {
     [/^conversations\/\d+\/messages$/, ["GET", "POST"]],
     [/^conversations\/\d+\/read$/, ["POST"]],
     [/^conversations\/\d+\/journal-shares\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/, ["GET"]],
+    [/^conversations\/\d+\/journal-shares\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/audio$/, ["GET"]],
     [/^invitations\/(preview|connect)$/, ["POST"]],
     [/^me$/, ["GET", "PATCH"]], [/^clients$/, ["GET"]],
     [/^consent-config$/, ["GET"]], [/^me\/consents$/, ["GET", "POST"]],

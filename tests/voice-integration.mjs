@@ -7,6 +7,9 @@ import { createIsolatedTestApp } from './isolated-next-app.mjs'
 import { sealSession, SESSION_COOKIE } from '../lib/provider-session.ts'
 
 const audioId = 'aabbccdd-1234-4567-89ab-0123456789ab'
+const shareId = 'bbccddee-1234-4567-89ab-0123456789ab'
+const sharedPath = `conversations/1/journal-shares/${shareId}`
+let withdrawn = false
 const provider = { id: 1, name: 'Voice Test Provider', email: 'voice@example.test', practice: 'Synthetic practice', timezone: 'UTC' }
 let uploads = 0, failMessage = true, messageAttempts = [], messages = [], releaseFirstMessage
 let notifyFirstMessage
@@ -24,6 +27,12 @@ const backend = createServer(async (request, response) => {
   if (path === 'conversations') return json([{ id: 1, user_id: 10, name: 'Synthetic patient', unread: 0 }])
   if (path === 'conversations/1/read') return json({})
   if (path === 'conversations/1/messages' && request.method === 'GET') return json({ data: messages, has_more: false })
+  if (path === sharedPath) return withdrawn ? json({}, 404) : json({ share_id: shareId, entry: { kind: 'voice', title: 'Shared voice reflection', body: '', audio: { id: audioId, duration: 2, media_type: 'audio/mp4' } }, later_edits_shared: false })
+  if (path === `${sharedPath}/audio`) {
+    if (withdrawn) return json({}, 404)
+    assert.equal(request.headers.range, 'bytes=0-3')
+    response.writeHead(206, { 'Content-Type': 'audio/mp4', 'Content-Range': 'bytes 0-3/8', 'Accept-Ranges': 'bytes', 'Content-Length': '4' }); response.end(Buffer.from([1, 2, 3, 4])); return
+  }
   if (path === 'conversations/1/messages') {
     const payload = JSON.parse(bytes.toString())
     messageAttempts.push(payload)
@@ -69,6 +78,15 @@ try {
   assert.equal(playback.status, 206); assert.equal(playback.headers.get('content-range'), 'bytes 0-3/8'); assert.equal((await playback.arrayBuffer()).byteLength, 4)
   assert.match(playback.headers.get('cache-control'), /no-store/)
   assert.equal((await fetch(`${origin}/api/provider/audio-attachments/${audioId}`)).status, 401)
+  const sharedPlayback = await fetch(`${origin}/api/provider/${sharedPath}/audio`, { headers: { ...headers, Range: 'bytes=0-3' } })
+  assert.equal(sharedPlayback.status, 206)
+  assert.equal(sharedPlayback.headers.get('content-range'), 'bytes 0-3/8')
+  assert.match(sharedPlayback.headers.get('cache-control'), /no-store/)
+  assert.equal((await sharedPlayback.arrayBuffer()).byteLength, 4)
+  assert.equal((await fetch(`${origin}/api/provider/${sharedPath}/audio`)).status, 401)
+  withdrawn = true
+  assert.equal((await fetch(`${origin}/api/provider/${sharedPath}/audio`, { headers })).status, 404)
+  withdrawn = false
   uploads = 0
 
   if (process.env.PROVIDER_PLAYWRIGHT_PATH) {
@@ -126,6 +144,24 @@ try {
     assert.equal(messageAttempts[0].client_id, messageAttempts[1].client_id)
     assert.equal(messageAttempts[1].audio_attachment_id, audioId)
     await page.getByLabel('Voice message', { exact: true }).waitFor()
+    messages.push({ id: 2, content: '', records: [{ type: 'journal_shares', id: shareId, data: { requires_online_review: true, label: 'Shared voice journal entry' } }], sender: 'patient', created_at: new Date().toISOString() })
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.reload()
+    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Messages', exact: true }).click()
+    await page.getByRole('button', { name: 'Review shared journal copy' }).click()
+    await page.getByLabel('Shared voice journal', { exact: true }).waitFor()
+    assert.equal(await page.getByLabel('Shared voice journal', { exact: true }).getAttribute('preload'), 'none')
+    assert.ok((await page.getByLabel('Shared voice journal', { exact: true }).getAttribute('src')).endsWith(`${sharedPath}/audio`))
+    await page.setViewportSize({ width: 320, height: 568 })
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+    await page.screenshot({ path: 'scratch/voice-shared-journal-small-phone.png' })
+    withdrawn = true
+    await page.getByLabel('Shared voice journal', { exact: true }).dispatchEvent('play')
+    await page.getByRole('alert').filter({ hasText: 'Could not play this recording' }).waitFor()
+    assert.equal(await page.getByLabel('Shared voice journal', { exact: true }).getAttribute('src'), null)
+    await page.getByRole('button', { name: 'Refresh copy', exact: true }).click()
+    await page.getByRole('alert').filter({ hasText: 'This copy could not be opened' }).waitFor()
+    assert.equal(await page.getByLabel('Shared voice journal', { exact: true }).count(), 0)
     assert.deepEqual(errors, [])
     await page.screenshot({ path: 'scratch/voice-recording-result.png' })
   }

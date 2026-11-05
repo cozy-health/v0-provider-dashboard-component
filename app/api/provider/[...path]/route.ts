@@ -62,7 +62,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   try {
     const base = apiBase()
     const headers: Record<string, string> = { Accept: "application/json" }
-    const audioPlayback = method === "GET" && /^audio-attachments\/[a-f0-9-]{36}$/.test(path)
+    const audioPlayback = method === "GET" && (/^audio-attachments\/[a-f0-9-]{36}$/.test(path) || /^conversations\/\d+\/journal-shares\/[a-f0-9-]{36}\/audio$/.test(path))
     if (audioPlayback && request.headers.has("range")) headers.Range = request.headers.get("range") ?? ""
     const userAgent = request.headers.get("user-agent")
     if (userAgent) headers["User-Agent"] = userAgent.slice(0, 1000)
@@ -135,7 +135,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       if (!result.ok && result.status !== 401) return error("Sign out could not be completed. Please retry.", 502)
       return clear(NextResponse.json({ message: "Signed out." }, { headers: noStore }), scope)
     }
-    if (method === "GET" && /^audio-attachments\/[a-f0-9-]{36}$/.test(path) && result.ok) {
+    if (audioPlayback && result.ok) {
       const contentType = result.headers.get("content-type") ?? ""
       if (!/^(audio\/|video\/(webm|mp4)|application\/ogg)/.test(contentType)) return error("Invalid audio response.", 502)
       const playbackHeaders = new Headers({ ...noStore, "Content-Type": contentType })

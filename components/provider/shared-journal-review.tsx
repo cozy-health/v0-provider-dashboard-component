@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import { useEffect, useRef, useState } from "react"
-import { api, type SharedJournalCopy } from "@/lib/provider-api"
+import { api, providerMediaUrl, type SharedJournalCopy } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
@@ -43,12 +43,51 @@ export function SharedJournalReview({ conversationId, shareId }: { conversationI
     <Button variant="outline" onClick={() => void review()}>Review shared journal copy</Button>
     <Dialog open={open} onOpenChange={value => { if (!value) close() }}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Shared written journal copy</DialogTitle><DialogDescription>The patient explicitly shared this copy. Later edits remain private. Audio is excluded.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Shared journal copy</DialogTitle><DialogDescription>The patient explicitly shared this copy. Later edits remain private. Access ends when sharing is withdrawn.</DialogDescription></DialogHeader>
         {loading && <p role="status">Loading shared copy…</p>}
         {error && <p role="alert">{error}</p>}
-        {copy && <article><h3 className="break-words font-semibold">{copy.entry.title || "Untitled journal"}</h3><p className="mt-3 whitespace-pre-wrap break-words">{copy.entry.body}</p></article>}
+        {copy && <article><h3 className="break-words font-semibold">{copy.entry.title || "Untitled journal"}</h3>
+          {copy.entry.kind === "voice" && copy.entry.audio
+            ? <SharedVoiceAudio path={`conversations/${conversationId}/journal-shares/${shareId}`} duration={copy.entry.audio.duration} />
+            : <p className="mt-3 whitespace-pre-wrap break-words">{copy.entry.body}</p>}
+        </article>}
         <Button disabled={loading} variant="outline" onClick={() => void review()}>Refresh copy</Button>
       </DialogContent>
     </Dialog>
   </>
+}
+
+function SharedVoiceAudio({ path, duration }: { path: string; duration: number }) {
+  const audio = useRef<HTMLAudioElement | null>(null)
+  const permit = useRef(false)
+  const pending = useRef<AbortController | null>(null)
+  const [error, setError] = useState(false)
+  async function authorize(resume: boolean) {
+    const element = audio.current
+    if (!element) return
+    element.pause()
+    pending.current?.abort()
+    const controller = new AbortController()
+    pending.current = controller
+    try {
+      await api<SharedJournalCopy>(path, { signal: controller.signal })
+      if (controller.signal.aborted) return
+      if (resume) { permit.current = true; await element.play() }
+    } catch {
+      if (controller.signal.aborted) return
+      element.pause(); element.removeAttribute("src"); element.load(); setError(true)
+    }
+  }
+  useEffect(() => {
+    const element = audio.current
+    element?.setAttribute("src", providerMediaUrl(`${path}/audio`))
+    return () => { pending.current?.abort(); if (element) { element.pause(); element.removeAttribute("src"); element.load() } }
+  }, [path])
+  return <div className="mt-3 space-y-2">
+    <audio ref={audio} controls preload="none" src={providerMediaUrl(`${path}/audio`)} aria-label="Shared voice journal" className="w-full max-w-full" onError={() => setError(true)}
+      onPlay={() => { if (permit.current) { permit.current = false; return }; void authorize(true) }}
+      onSeeking={() => { void authorize(audio.current?.paused === false) }} />
+    <p className="text-sm text-muted-foreground">Voice journal · {Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}</p>
+    {error && <p role="alert" className="text-sm text-destructive">Could not play this recording. Refresh the copy to check access and retry.</p>}
+  </div>
 }
