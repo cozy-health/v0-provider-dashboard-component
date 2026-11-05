@@ -72,6 +72,14 @@ try {
     if (Date.now() > deadline) throw new Error('Local Next fixture did not start; see next.log')
     await new Promise(resolve => setTimeout(resolve, 500))
   }
+  // Await cold route compilation before timing browser navigation. Keep all UI assertions unchanged.
+  const warm = await fetch(`${origin}/admin/manage/support`, {
+    headers: { cookie: `cozy-admin=${sealAdmin({ token: 'fixture-admin', expires: Date.now() + 1200000 })}` },
+    signal: AbortSignal.timeout(90000),
+  })
+  assert.equal(warm.status, 200, 'Support fixture must be ready before browser acceptance')
+  assert.equal(new URL(warm.url).pathname, '/admin/manage/support', 'Fixture session must reach support')
+  await warm.text()
   browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({ viewport: { width: 1100, height: 900 } })
   await context.route('**/*', route => { const url = new URL(route.request().url()); return ['127.0.0.1', 'localhost'].includes(url.hostname) ? route.continue() : route.abort() })
