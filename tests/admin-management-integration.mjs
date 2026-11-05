@@ -6,6 +6,7 @@ import { randomBytes } from 'node:crypto'
 import { createIsolatedTestApp } from './isolated-next-app.mjs'
 import { pathToFileURL } from 'node:url'
 import { mkdir } from 'node:fs/promises'
+import { validateQuizImport } from '../lib/admin-quiz-import.mjs'
 const cell = { status: 'available', count: 15 }
 const meta = { release: '2026-10-01', timezone: 'UTC', precision: 'Counts rounded down to multiples of five.', window: { from: '2026-07-03', to_exclusive: '2026-10-01' } }
 let coping = [], quizzes = [], seenRange = '', forbidden = false
@@ -43,7 +44,8 @@ const backend = createServer(async (request, response) => {
   const score = body.answers.reduce((total, option, index) => total + body.definition.questions[index].options[option].score, 0)
   return send(200, { data: { score, maximum_score: 1, interpretation: 'Synthetic band', recommendation: 'Synthetic recommendation', disclaimer: body.definition.disclaimer, is_crisis_flagged: false } })
  }
- if (path === 'quizzes' && request.method === 'POST') { quizzes.push({ id: 1, ...body, status: 'draft', version: 'a'.repeat(64) }); return send(201, {}) }
+ if (path === 'quizzes' && request.method === 'POST') { validateQuizImport(body.definition); quizzes.push({ id: 1, ...body, status: 'draft', version: 'a'.repeat(64) }); return send(201, {}) }
+ if (path === 'quizzes/2' && request.method === 'PUT') { assert.equal(body.expected_version, 'b'.repeat(64)); validateQuizImport(body.definition); quizzes[1] = { ...quizzes[1], ...body }; return send(200, {}) }
  if (/^quizzes\/1\/publish$/.test(path)) { quizzes[0].status = 'published'; return send(200, {}) }
  const rows = path === 'content/coping' ? coping : path === 'quizzes' ? quizzes : path === 'users' ? [{ id: 1, name: 'Test Person', email: 'person@example.test', is_active: true }] : []
  if (request.method === 'GET') return send(200, { data: { data: rows, current_page: 1, last_page: 1, total: rows.length }, ...(path === 'emails' ? { events: [{ id: 'welcome', name: 'Account registration' }], queue: { depth: 0, oldest_job_age_seconds: 0 } } : {}) })
@@ -138,6 +140,10 @@ try {
  await page.getByText('There are no records to display', { exact: true }).waitFor()
  await page.screenshot({ path: '../docs/validation/admin-phases/quiz-management-light.png', fullPage: true })
  await page.getByRole('button', { name: 'Create Assessment', exact: true }).click()
+ assert.match(await page.getByLabel('disclaimer', { exact: true }).inputValue(), /not a diagnosis/)
+ assert.equal(await page.getByLabel('Assessment timeframe', { exact: true }).inputValue(), 'Over the past two weeks')
+ assert.equal(await page.getByLabel('Licence / usage rights', { exact: true }).inputValue(), 'Created by Cozy Health for use in Cozy well-being check-ins.')
+ assert.equal(await page.getByLabel('Content approval reference', { exact: true }).inputValue(), 'Cozy Health well-being check-in editorial review')
  const syntheticDefinition = { title: 'Synthetic preview', slug: 'synthetic-preview', type: 'wellness', description: 'Engineering fixture only', estimated_minutes: 1,
   disclaimer: 'Not approved for use outside automated tests.', scoring_rules: { timeframe: 'Today', provenance: { license: 'Original synthetic fixture', approval_reference: 'Automated test only' }, bands: [{ max: 1, label: 'Synthetic band', recommendation: 'Synthetic recommendation' }] },
   questions: [{ question: 'Synthetic question?', options: [{ label: 'Zero', score: 0 }, { label: 'One', score: 1 }] }] }
@@ -171,6 +177,28 @@ try {
  page.once('dialog', dialog => dialog.accept())
  await page.getByRole('button', { name: 'Publish', exact: true }).click()
  await page.locator('tbody').getByText('published', { exact: true }).waitFor()
+ quizzes.push({ id: 2, title: 'Wellbeing Check', status: 'draft', quiz_id: 1, version: 'b'.repeat(64), definition: {
+  title:'Wellbeing Check',slug:'wellbeing-check',type:'wellbeing',description:'Legacy reflection',estimated_minutes:3,disclaimer:'',
+  scoring_rules:{timeframe:'',bands:[{max:1,label:'',recommendation:''}]},
+  questions:Array.from({length:3},(_,index)=>({question:`Legacy question ${index+1}`,options:['Never','Sometimes','Often','Nearly always'].map((label,score)=>({label,score}))})),
+ } })
+ await page.reload()
+ await page.getByRole('row').filter({hasText:'Wellbeing Check'}).getByRole('button',{name:'Edit',exact:true}).click()
+ assert.match(await page.getByLabel('disclaimer',{exact:true}).inputValue(),/not a diagnosis/)
+ assert.equal(await page.getByLabel('Assessment timeframe',{exact:true}).inputValue(),'Over the past two weeks')
+ assert.deepEqual(await page.getByLabel('max',{exact:true}).evaluateAll(inputs=>inputs.map(input=>Number(input.value))),[3,6,9])
+ await page.getByLabel('disclaimer',{exact:true}).fill('Custom Cozy reflection disclaimer.')
+ await page.getByLabel('Assessment timeframe',{exact:true}).fill('Today')
+ await page.getByRole('button',{name:'Save draft',exact:true}).click()
+ await page.getByRole('dialog').waitFor({state:'hidden'})
+ assert.equal(quizzes[1].status,'draft')
+ assert.equal(quizzes[1].definition.disclaimer,'Custom Cozy reflection disclaimer.')
+ assert.equal(quizzes[1].definition.scoring_rules.timeframe,'Today')
+ assert.deepEqual(quizzes[1].definition.scoring_rules.bands.map(band=>band.max),[3,6,9])
+ await page.getByRole('row').filter({hasText:'Wellbeing Check'}).getByRole('button',{name:'Edit',exact:true}).click()
+ assert.equal(await page.getByLabel('disclaimer',{exact:true}).inputValue(),'Custom Cozy reflection disclaimer.')
+ assert.equal(await page.getByLabel('Assessment timeframe',{exact:true}).inputValue(),'Today')
+ await page.keyboard.press('Escape')
  await page.getByRole('link', { name: 'Users', exact: true }).click()
  await page.locator('tbody').getByText('person@example.test', { exact: true }).waitFor()
  forbidden = true
