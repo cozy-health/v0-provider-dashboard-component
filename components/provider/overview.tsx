@@ -2,11 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, Failure, Loading, date, useData } from "./data-list"
+import { PatientRoster } from "./patient-roster"
 
 type Overview = { data: { checked_at: string; totals: { connected_patients: number; unread_messages: number; shared_assessments: number } } }
 type Destination = "Patients" | "Messages" | "Shared assessment results"
 
-export function ProviderOverview({ navigate }: { navigate: (destination: Destination) => void }) {
+export function ProviderOverview({ navigate, openPatient }: { navigate: (destination: Destination) => void; openPatient: (id: number) => void }) {
   const { data, error, loading, reload } = useData<Overview>("overview")
   if (loading) return <Loading />
   if (error) return <Failure error={error} retry={reload} />
@@ -23,5 +24,6 @@ export function ProviderOverview({ navigate }: { navigate: (destination: Destina
       <Button variant="outline" onClick={() => navigate(metric.destination)}>View {metric.destination.toLowerCase()}</Button>
     </Card>)}</div>
     {metrics.every(metric => metric.value === 0) && <p className="text-sm text-muted-foreground">No connected patients, unread messages or shared results yet. Accept a patient invitation from Patients to get started.</p>}
+    <PatientRoster select={openPatient} />
   </div>
 }

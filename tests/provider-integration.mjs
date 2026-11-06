@@ -26,7 +26,7 @@ let documentConfig = { enforce_blocking: false, documents: {
   privacy_policy: { title: 'Provider Privacy Policy', version: 'draft-0.1', published: false, required: true, content: null },
 } }
 let documentConsents = []
-const client = () => ({ user_id: 10, name: 'Test', linked_at: '2026-10-01T10:00:00Z', consent_flags: consent })
+const client = () => ({ user_id: 10, name: 'Test', linked_at: '2026-10-01T10:00:00Z', consent_flags: consent, mood_summary: consent.moods ? { period: { key: 'week', label: 'Week', start: '2026-11-01', end: '2026-11-07', timezone: 'UTC', bucket_unit: 'day' }, priority: { level: 'low', status: 'low', negative_days: 1, explanation: '1 negative day in the last 7 days.' }, coverage: { check_ins: 1, recorded_days: 1, possible_days: 7 }, counts: { positive: 0, negative: 1, neutral: 0, unclassified: 0 }, average_intensity: 4, moods: [{ name: 'anxious', count: 1 }], triggers: [{ name: 'work', count: 1 }], coping_strategies: [{ name: 'breathing', count: 1 }], latest_check_in: '2026-11-06T10:00:00Z' } : null })
 const backend = createServer(async (request, response) => {
   const url = new URL(request.url, 'http://localhost')
   const paginated = data => { const page = Number(url.searchParams.get('page') || 1); const size = Number(url.searchParams.get('per_page') || 20); return { data: data.slice((page - 1) * size, page * size), current_page: page, last_page: Math.max(1, Math.ceil(data.length / size)), total: data.length } }
@@ -69,6 +69,7 @@ const backend = createServer(async (request, response) => {
   }
   if (path.startsWith('clients/10') && !linked) return send({ message: 'No link' }, 404)
   if (path === 'clients/10') return send(client())
+  if (path === 'clients/10/insights') return consent.moods ? send({ data: { period: { key: url.searchParams.get('period') || 'week', label: url.searchParams.get('period') === 'month' ? 'This month' : url.searchParams.get('period') === 'year' ? 'This year' : 'Week', start: '2026-11-01', end: '2026-11-07', timezone: 'UTC', bucket_unit: url.searchParams.get('period') === 'year' ? 'month' : 'day' }, priority: { level: 'low', status: 'low', negative_days: 1, explanation: '1 negative day in the last 7 days.' }, current_priority: { level: 'low', status: 'low', negative_days: 1, explanation: '1 negative day in the last 7 days.' }, coverage: { check_ins: 1, recorded_days: 1, possible_days: 7 }, counts: { positive: 0, negative: 1, neutral: 0, unclassified: 0 }, average_intensity: 4, moods: [{ name: 'anxious', count: 1 }], triggers: [{ name: 'work', count: 1 }], coping_strategies: [{ name: 'breathing', count: 1 }], buckets: [{ key: '2026-11-06', label: 'Nov 6', start: '2026-11-06', end: '2026-11-06', check_ins: 1, positive: 0, negative: 1, neutral: 0, unclassified: 0, average_intensity: 4 }], trend: null } }) : send({}, 404)
   if (path === 'clients/10/moods') return consent.moods ? send(paginated([{ id: 'm1', mood: 'anxious', intensity: 4, triggers: ['work'], custom_trigger: null, coping_strategies: ['breathing'], coping_helped: 'no', created_at: '2026-10-09T10:00:00Z' }])) : send({}, 404)
   if (path === 'clients/10/journals') return consent.journals ? send(paginated(populatedHistory ? [{ id: 'j1', title: 'Shared summary fixture', type: 'text', word_count: 42, has_voice: true, created_at: '2026-10-09T10:00:00Z' }] : [])) : send({}, 404)
   if (path === 'clients/10/quizzes') return consent.quizzes ? send(paginated(populatedHistory ? [{ id: 'q1', quiz_slug: 'phq-9', score: 4, interpretation: 'Fixture interpretation', completed_at: '2026-10-09T10:00:00Z' }] : [])) : send({}, 404)
@@ -138,6 +139,8 @@ try {
   cookie = setCookie.split(';')[0]
   assert.equal(calls.at(-1).body.device_name, 'cozy-provider-dashboard')
   assert.equal((await request('clients')).status, 200)
+  assert.equal((await request('clients/10/insights?period=month')).status, 200)
+  assert.equal(calls.at(-1).query, '?period=month')
   assert.equal((await request('quiz-shares')).status, 200)
   const sharedSummary = await (await request('quiz-shares/1')).json()
   assert.equal(sharedSummary.score, 4); assert.ok(!('answers' in sharedSummary))
@@ -193,16 +196,16 @@ try {
     assert.equal(await page.getByRole('heading', { name: 'Connected patients', exact: true }).locator('..').getByText('1', { exact: true }).count(), 1)
     await reviewThemes(page, 'provider-overview')
     await page.getByRole('button', { name: 'View patients', exact: true }).click()
-    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.getByRole('button', { name: 'Open insights' }).waitFor()
     await page.goto(origin)
     await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
     await page.getByRole('button', { name: 'View patients', exact: true }).click()
-    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.getByRole('button', { name: 'Open insights' }).waitFor()
     await reviewThemes(page, 'provider-root')
     await page.goto(`${origin}/provider`)
     await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
     await page.getByRole('button', { name: 'View patients', exact: true }).click()
-    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.getByRole('button', { name: 'Open insights' }).waitFor()
     await reviewThemes(page, 'provider-alias')
     assert.equal(new URL(page.url()).pathname, '/provider')
     assert.equal(await page.locator('a[href^="/admin"]').count(), 0)
@@ -218,9 +221,9 @@ try {
     quizShareActive = true
     await page.getByRole('button', { name: 'Patients', exact: true }).click()
     await page.getByLabel('Search patients').fill('missing-patient')
-    await page.getByText('No patients match your search.').waitFor()
+    await page.getByText('No patients match the current search and filter.').waitFor()
     await page.getByLabel('Search patients').fill('10')
-    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.getByRole('button', { name: 'Open insights' }).waitFor()
     await page.getByLabel('Search patients').fill('')
     const scope = (await context.cookies()).find(cookie => cookie.name === 'cozy-provider-scope')?.value
     const credential = (await context.cookies()).find(cookie => cookie.name === (scope ? `cozy-provider.${scope}` : SESSION_COOKIE))
@@ -244,10 +247,15 @@ try {
     await page.getByRole('button', { name: 'Reports', exact: true }).click()
     await page.getByText('No reports generated yet.', { exact: false }).waitFor()
     await page.getByRole('button', { name: 'Patients', exact: true }).click()
-    await page.getByRole('button', { name: 'View patient' }).click()
+    await page.getByRole('button', { name: 'Open insights' }).click()
+    await page.getByRole('heading', { name: 'Week insights' }).waitFor()
+    await page.getByRole('button', { name: 'Inspect Nov 6' }).click()
     await page.getByText('Intensity 4/10', { exact: false }).waitFor()
     await page.getByText('Feedback: no', { exact: false }).waitFor()
-    assert.equal(await page.locator('.recharts-bar-rectangle path').count(), 2)
+    await page.getByRole('button', { name: 'Back to summary' }).click()
+    await page.getByRole('button', { name: 'This month' }).click()
+    await page.getByRole('heading', { name: 'This month insights' }).waitFor()
+    await page.getByRole('tab', { name: 'Other shared data' }).click()
     await page.getByText('No shared journal entries yet.').waitFor()
     await page.getByText('No shared assessment results yet.').waitFor()
     populatedHistory = true
@@ -327,11 +335,11 @@ try {
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Patients', exact: true }).click()
     await page.getByRole('dialog').waitFor({ state: 'hidden' })
-    await page.getByRole('button', { name: 'View patient' }).waitFor()
+    await page.getByRole('button', { name: 'Open insights' }).waitFor()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
     await page.screenshot({ path: '../docs/PD5_MOBILE_VIEW.png', fullPage: true })
     await page.setViewportSize({ width: 1280, height: 900 })
-    await page.getByRole('button', { name: 'View patient' }).click()
+    await page.getByRole('button', { name: 'Open insights' }).click()
     await page.getByText('This patient has not shared any data types.', { exact: false }).waitFor()
     await page.screenshot({ path: '../docs/PD5_CONSENT_VIEW.png', fullPage: true })
     linked = false

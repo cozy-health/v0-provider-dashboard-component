@@ -9,6 +9,8 @@ process.env.PROVIDER_DASHBOARD_ORIGIN = 'https://dashboard.example.test'
 
 test('messaging bridge permits only conversation reads, sends and read markers', () => {
   assert.equal(allowedRoute('overview', 'GET'), true)
+  assert.equal(allowedRoute('clients/12/insights', 'GET'), true)
+  for (const method of ['POST', 'PATCH', 'DELETE']) assert.equal(allowedRoute('clients/12/insights', method), false)
   for (const method of ['POST', 'PUT', 'DELETE']) assert.equal(allowedRoute('overview', method), false)
   assert.equal(allowedRoute('conversations', 'GET'), true)
   assert.equal(allowedRoute('conversations/12/messages', 'GET'), true)

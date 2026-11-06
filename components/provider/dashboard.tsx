@@ -20,6 +20,7 @@ import { QuizInbox } from "./quiz-inbox"
 
 import { ProviderOverview } from "./overview"
 import { Messages } from "./messages"
+import { PatientRoster } from "./patient-roster"
 
 const navigation = [{ name: "Overview", icon: LayoutDashboard }, { name: "Messages", icon: MessageCircle }, { name: "Patients", icon: Users }, { name: "Shared assessment results", icon: FileText }, { name: "Resources", icon: BookOpen }, { name: "Reports", icon: FileText }, { name: "Audit log", icon: Shield }, { name: "Settings", icon: Settings }] as const
 export function ProviderDashboard({ expires }: { expires: number }) {
@@ -58,8 +59,8 @@ export function ProviderDashboard({ expires }: { expires: number }) {
     <main className="min-w-0 flex-1 max-w-7xl p-4 pb-12 sm:p-6 lg:p-8">
       <header className="mb-8"><p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Cozy Health · Provider portal</p><h1 className="break-words text-2xl font-semibold sm:text-3xl">{view === "Patient messages" ? "Messages" : patient ? "Patient overview" : view}</h1><p className="mt-2 text-sm text-muted-foreground">Patient sharing choices control the information available here.</p></header>
       {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <ConsentNotice key={provider.id} ownerId={provider.id}>
-        {view === "Overview" && <ProviderOverview navigate={destination => { setPatient(null); setView(destination) }} />}
-        {view === "Patients" && (patient ? <><Button className="mb-4" onClick={() => setView("Patient messages")}>Message patient</Button><PatientView key={patient} id={patient} back={() => setPatient(null)} /></> : <Roster select={setPatient} email={provider.email} />)}
+        {view === "Overview" && <ProviderOverview navigate={destination => { setPatient(null); setView(destination) }} openPatient={id => { setPatient(id); setView("Patients") }} />}
+        {view === "Patients" && (patient ? <><Button className="mb-4" onClick={() => setView("Patient messages")}>Message patient</Button><PatientView key={patient} id={patient} back={() => setPatient(null)} /></> : <PatientRoster select={setPatient} email={provider.email} allowConnection title="Patients" />)}
         {view === "Messages" && <Messages />}
         {view === "Patient messages" && <Messages userId={patient ?? undefined} />}
         {view === "Resources" && <ResourceLibrary />}

@@ -44,7 +44,15 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 export type Provider = { id: number; name: string; email: string; practice: string | null; timezone: string; is_verified: boolean; license_number: string | null; license_state: string | null }
 export type ConsentType = "moods" | "journals" | "quizzes" | "notes"
-export type Client = { user_id: number; name: string; linked_at: string; consent_flags: Record<ConsentType, boolean>; gender?: string; date_of_birth?: string }
+export type InsightPeriodKey = "week" | "month" | "year"
+export type InsightPeriod = { key: InsightPeriodKey; label: string; start: string; end: string; timezone: string; bucket_unit: "day" | "month" }
+export type MoodPriority = { level: "high" | "moderate" | "low" | null; status: "high" | "moderate" | "low" | "no_negative" | "no_checkins"; negative_days: number; explanation: string; period?: InsightPeriod }
+export type NamedCount = { name: string; count: number }
+export type InsightCounts = { positive: number; negative: number; neutral: number; unclassified: number }
+export type MoodSummary = { period: InsightPeriod; priority: MoodPriority; coverage: { check_ins: number; recorded_days: number; possible_days: number }; counts: InsightCounts; average_intensity: number | null; moods: NamedCount[]; triggers: NamedCount[]; coping_strategies: NamedCount[]; latest_check_in: string | null }
+export type Client = { user_id: number; name: string; linked_at: string; consent_flags: Record<ConsentType, boolean>; mood_summary: MoodSummary | null; gender?: string; date_of_birth?: string }
+export type InsightBucket = InsightCounts & { key: string; label: string; start: string; end: string; check_ins: number; average_intensity: number | null }
+export type MoodInsights = { period: InsightPeriod; priority: MoodPriority; current_priority: MoodPriority; coverage: MoodSummary["coverage"]; counts: InsightCounts; average_intensity: number | null; moods: NamedCount[]; triggers: NamedCount[]; coping_strategies: NamedCount[]; buckets: InsightBucket[]; trend: { previous_bucket: string; latest_bucket: string; check_in_change: number; intensity_change: number | null } | null }
 export type Page<T> = { data: T[]; current_page: number; last_page: number; total: number }
 export type Mood = { id: string; mood: string; intensity: number; triggers: string[] | null; custom_trigger: string | null; coping_strategies: string[] | null; coping_helped: string | null; client_created_at: string | null; created_at: string }
 export type Journal = { id: string; title: string | null; type: string; word_count: number; has_voice: boolean; created_at: string }

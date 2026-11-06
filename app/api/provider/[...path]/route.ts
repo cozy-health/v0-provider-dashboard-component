@@ -126,7 +126,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       return renewCookie(new NextResponse(await pdf.arrayBuffer(), { headers: { ...noStore, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="provider-report-${id}.pdf"` } }))
     }
     const target = new URL(path, base)
-    for (const name of ["page", "per_page", "from", "to", "action", "resource_type", "before", "since"]) {
+    for (const name of ["page", "per_page", "from", "to", "period", "action", "resource_type", "before", "since"]) {
       const value = request.nextUrl.searchParams.get(name)
       if (value !== null) target.searchParams.set(name, value)
     }

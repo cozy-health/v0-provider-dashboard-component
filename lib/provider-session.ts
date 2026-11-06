@@ -64,7 +64,7 @@ export function allowedRoute(path: string, method: string) {
     [/^me$/, ["GET", "PATCH"]], [/^clients$/, ["GET"]],
     [/^consent-config$/, ["GET"]], [/^me\/consents$/, ["GET", "POST"]],
     [/^clients\/\d+$/, ["GET"]],
-    [/^clients\/\d+\/(moods|journals|quizzes|consents)$/, ["GET"]],
+    [/^clients\/\d+\/(moods|journals|quizzes|consents|insights)$/, ["GET"]],
     [/^clients\/\d+\/(notes|resources)$/, ["GET", "POST"]],
     [/^clients\/\d+\/(notes|resources)\/\d+$/, ["DELETE"]],
     [/^resources$/, ["GET", "POST"]], [/^resources\/\d+$/, ["PATCH", "DELETE"]],

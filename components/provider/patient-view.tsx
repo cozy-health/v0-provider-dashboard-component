@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, DataList, Empty, Failure, Loading, useData, date } from "./data-list"
 import { DownloadButton } from "./portal-pages"
+import { MoodInsights } from "./mood-insights"
 
 export function PatientView({ id, back }: { id: number; back: () => void }) {
   const { data: client, error, loading, reload, revalidate } = useData<Client>(`clients/${id}`)
@@ -40,10 +41,10 @@ function PatientSections({ client }: { client: Client }) {
   }
   return <div className="space-y-6">
     <div className="flex gap-3 flex-wrap"><Button onClick={report} disabled={busy}>{busy ? "Generating PDF…" : "Generate monthly report"}</Button>{reportId && <DownloadButton id={reportId} />}</div>
-    <Tabs defaultValue="overview"><TabsList className="h-auto max-w-full flex-wrap justify-start"><TabsTrigger value="overview">Shared data</TabsTrigger><TabsTrigger value="resources">Resources</TabsTrigger>{shared.notes && <TabsTrigger value="notes">Provider notes</TabsTrigger>}</TabsList>
+    <Tabs defaultValue="insights"><TabsList className="h-auto max-w-full flex-wrap justify-start"><TabsTrigger value="insights">Insights</TabsTrigger><TabsTrigger value="overview">Other shared data</TabsTrigger><TabsTrigger value="resources">Resources</TabsTrigger>{shared.notes && <TabsTrigger value="notes">Provider notes</TabsTrigger>}</TabsList>
+      <TabsContent value="insights" className="mt-5"><MoodInsights userId={client.user_id} enabled={shared.moods} /></TabsContent>
       <TabsContent value="overview" className="space-y-6 mt-5">
         {!Object.values(shared).some(Boolean) && <Empty>This patient has not shared any data types. Resource assignments remain available.</Empty>}
-        {shared.moods && <section><h3 className="text-lg font-semibold mb-4">Mood check-ins, triggers and coping</h3><MoodHistory path={`${base}/moods`} /></section>}
         {shared.journals && <section><h3 className="text-lg font-semibold mb-4">Journal summaries</h3><DataList<Journal> path={`${base}/journals`} empty="No shared journal entries yet." render={entry => <Card><h4 className="font-medium">{entry.title || "Journal entry"}</h4><p className="text-sm text-muted-foreground">{entry.type} · {entry.word_count ?? 0} words{entry.has_voice ? " · Voice entry" : ""} · {date(entry.created_at)}</p></Card>} /></section>}
         {shared.quizzes && <section><h3 className="text-lg font-semibold mb-4">Assessment results</h3><DataList<Assessment> path={`${base}/quizzes`} empty="No shared assessment results yet." render={entry => <Card><h4 className="font-medium">{entry.quiz_slug}</h4><p className="text-sm">Score: {entry.score} · {entry.interpretation}</p><p className="text-xs text-muted-foreground mt-2">{date(entry.completed_at)}</p></Card>} /></section>}
       </TabsContent>
