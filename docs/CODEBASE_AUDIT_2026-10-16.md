@@ -1,4 +1,4 @@
-# Dashboard audit — 2026-10-16
+# Dashboard audit: 2026-10-16
 
 ## Repairs
 
