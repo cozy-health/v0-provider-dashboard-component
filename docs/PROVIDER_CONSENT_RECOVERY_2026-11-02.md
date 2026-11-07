@@ -1,4 +1,4 @@
-﻿# Provider consent recovery — 2 November 2026
+﻿# Provider consent recovery - 2 November 2026
 
 Development only. Required-consent activation and general sign-in enrollment remain paused. This does not certify the whole P03/P04 or app build plan.
 
