@@ -15,11 +15,12 @@ import { AdminIcon, moduleVisual } from "./admin-visuals"
 const groups: { label: string; items: [string, string][] }[] = [
  { label: "Overview", items: [["/admin", "Overview"], ["/admin/datacenter", "Analytics"], ["/admin/safety", "Safety"]] },
  { label: "People & Wellness", items: adminModules.filter(([key]) => ["articles", "users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
- { label: "Community", items: adminModules.filter(([key]) => ["communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
+ { label: "Community", items: adminModules.filter(([key]) => ["community-moderation", "communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
  { label: "Operations", items: adminModules.filter(([key]) => ["packages", "subscriptions", "student-applications", "subscription-events", "development-access", "emails", "support", "privacy-requests"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
 ]
 function capability(href: string) {
  const moduleKey = href.split("/").pop()
+ if (moduleKey === "community-moderation") return "admin:moderation"
  if (moduleKey === "development-access") return "admin:development-access"
  if (moduleKey === "support") return "admin:support"
  if (moduleKey === "privacy-requests") return "admin:privacy"

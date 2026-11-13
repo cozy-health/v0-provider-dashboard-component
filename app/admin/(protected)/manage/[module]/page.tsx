@@ -1,4 +1,5 @@
 import { StudentReview } from "@/components/admin/student-review"
+import { CommunityModerationWorkspace } from "@/components/admin/community-moderation"
 import { SupportWorkspace, PrivacyWorkspace } from "@/components/admin/customer-operations"
 import { DevelopmentAccess } from "@/components/admin/development-access"
 import { ArticleEditor } from "@/components/admin/article-editor"
@@ -8,6 +9,7 @@ import { adminModules } from "@/lib/admin-modules"
 export default async function Page({ params }: { params: Promise<{ module: string }> }) {
     const { module } = await params
     if (!adminModules.some(([key]) => key === module)) notFound()
+    if (module === "community-moderation") return <CommunityModerationWorkspace />
     if (module === "student-applications") return <StudentReview />
     if (module === "support") return <SupportWorkspace />
     if (module === "privacy-requests") return <PrivacyWorkspace />

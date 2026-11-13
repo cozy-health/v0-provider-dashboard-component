@@ -38,6 +38,8 @@ export function validAdminOrigin(request: Request) {
 }
 export function adminRoute(path: string, method: string) {
   const uuid = "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
+  if (method === "GET" && path === "community-moderation") return true
+  if (method === "POST" && (path === "community-moderation/bans" || new RegExp(`^community-moderation/(bans/${uuid}/lift|appeals/${uuid}/review)$`).test(path))) return true
   if (method === "GET" && /^support\/[1-9][0-9]*\/thread$/.test(path)) return true
   if (method === "POST" && (/^support\/[1-9][0-9]*\/replies$/.test(path) || new RegExp(`^support/[1-9][0-9]*/messages/${uuid}/retry$`).test(path))) return true
   if (method === "GET" && (path === "privacy-requests" || new RegExp(`^privacy-requests/${uuid}$`).test(path))) return true

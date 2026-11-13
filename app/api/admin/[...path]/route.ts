@@ -14,6 +14,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   const metric = path.startsWith("metrics/")
   const list = /^(articles|privacy-requests|age-cases|student-applications|users|quizzes|reports|support|subscriptions(?:\/history)?|emails|content\/[a-z]+|community\/(posts|comments|members))$/.test(path)
   const allowed = path === "privacy-requests" && method === "GET" ? ["page", "status"] : ["development-access", "student-email-domains", "student-school-requests"].includes(path) && method === "GET" ? ["page"] : ["metrics/usage", "metrics/insights"].includes(path) ? ["range"] : list && method === "GET" ? ["search", "page", "per_page", ...(["reports", "support", "student-applications"].includes(path) ? ["status", ...(path === "reports" ? ["overdue"] : [])] : []), ...(path.startsWith("community/") ? ["group_id"] : [])] : []
+  if (path === "community-moderation" && method === "GET") allowed.push("page", "appeals_page", "user_id", "per_page")
   if ([...request.nextUrl.searchParams.keys()].some(key => !allowed.includes(key))) return error(metric ? "Only fixed reporting ranges are supported." : "Unsupported filter.", 422)
   const range = request.nextUrl.searchParams.get("range")
   if (range && !["7d", "30d", "90d"].includes(range)) return error("Choose 7d, 30d or 90d.", 422)

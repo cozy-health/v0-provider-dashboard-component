@@ -1,4 +1,5 @@
 export const adminModules = [
+ ["community-moderation", "Restrictions and Appeals"],
  ["articles", "Published Articles"],
  ["users", "Users"], ["moods", "Cozy Moods"], ["expressions", "Mood Expressions"],
  ["triggers", "Mood Triggers"], ["user-triggers", "User Triggers"], ["coping", "Cozy Coping Mechanisms"],
