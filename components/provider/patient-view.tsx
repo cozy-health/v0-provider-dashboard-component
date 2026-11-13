@@ -14,6 +14,7 @@ import { MoodInsights } from "./mood-insights"
 
 export function PatientView({ id, back }: { id: number; back: () => void }) {
   const { data: client, error, loading, reload, revalidate } = useData<Client>(`clients/${id}`)
+  const [activeTab, setActiveTab] = useState("insights")
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === "visible") revalidate() }
     const timer = window.setInterval(refresh, 30000)
@@ -24,12 +25,12 @@ export function PatientView({ id, back }: { id: number; back: () => void }) {
   return <div className="space-y-6"><div className="flex flex-wrap gap-3"><Button variant="outline" onClick={back}>Back to patients</Button><Button variant="outline" onClick={reload}>Refresh sharing</Button></div>
     {loading ? <Loading /> : error ? <Failure error={error} retry={reload} /> : client && <>
       <Card><h2 className="break-words text-2xl font-semibold">{client.name} <span className="text-sm font-normal text-muted-foreground">Patient #{id}</span></h2><p className="text-sm text-muted-foreground mt-2">Linked {date(client.linked_at)}</p><div className="flex gap-2 flex-wrap mt-4">{Object.entries(client.consent_flags).map(([type, shared]) => <Badge key={type} variant={shared ? "secondary" : "outline"}>{type}: {shared ? "Shared" : "Not shared"}</Badge>)}</div><p className="text-xs text-muted-foreground mt-3">Sharing is checked every 30 seconds and when you return to this window. Every request enforces current access.</p></Card>
-      <PatientSections key={JSON.stringify(client.consent_flags)} client={client} />
+      <PatientSections key={JSON.stringify(client.consent_flags)} client={client} activeTab={activeTab} onTabChange={setActiveTab} />
     </>}
   </div>
 }
 
-function PatientSections({ client }: { client: Client }) {
+function PatientSections({ client, activeTab, onTabChange }: { client: Client; activeTab: string; onTabChange: (value: string) => void }) {
   const base = `clients/${client.user_id}`
   const shared = client.consent_flags
   const [reportId, setReportId] = useState<number | null>(null)
@@ -41,7 +42,7 @@ function PatientSections({ client }: { client: Client }) {
   }
   return <div className="space-y-6">
     <div className="flex gap-3 flex-wrap"><Button onClick={report} disabled={busy}>{busy ? "Generating PDF…" : "Generate monthly report"}</Button>{reportId && <DownloadButton id={reportId} />}</div>
-    <Tabs defaultValue="insights"><TabsList className="h-auto max-w-full flex-wrap justify-start"><TabsTrigger value="insights">Insights</TabsTrigger><TabsTrigger value="overview">Other shared data</TabsTrigger><TabsTrigger value="resources">Resources</TabsTrigger>{shared.notes && <TabsTrigger value="notes">Provider notes</TabsTrigger>}</TabsList>
+    <Tabs value={activeTab === "notes" && !shared.notes ? "overview" : activeTab} onValueChange={onTabChange}><TabsList className="h-auto max-w-full flex-wrap justify-start"><TabsTrigger value="insights">Insights</TabsTrigger><TabsTrigger value="overview">Other shared data</TabsTrigger><TabsTrigger value="resources">Resources</TabsTrigger>{shared.notes && <TabsTrigger value="notes">Provider notes</TabsTrigger>}</TabsList>
       <TabsContent value="insights" className="mt-5"><MoodInsights userId={client.user_id} enabled={shared.moods} /></TabsContent>
       <TabsContent value="overview" className="space-y-6 mt-5">
         {!Object.values(shared).some(Boolean) && <Empty>This patient has not shared any data types. Resource assignments remain available.</Empty>}

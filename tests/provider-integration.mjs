@@ -261,6 +261,7 @@ try {
     populatedHistory = true
     await page.getByRole('button', { name: 'Refresh sharing' }).click()
     await page.getByRole('heading', { name: 'Shared summary fixture' }).waitFor()
+    assert.equal(await page.getByRole('tab', { name: 'Other shared data' }).getAttribute('aria-selected'), 'true')
     await page.getByText('Score: 4', { exact: false }).waitFor()
     await page.getByText('42 words', { exact: false }).waitFor()
     await page.screenshot({ path: '../docs/PD5_PATIENT_LIGHT.png', fullPage: true })
@@ -301,10 +302,13 @@ try {
     const downloaded = page.waitForEvent('download')
     await page.getByRole('button', { name: 'Download PDF' }).click()
     assert.equal((await downloaded).suggestedFilename(), 'provider-report-1.pdf')
+    await page.getByRole('tab', { name: 'Provider notes' }).click()
+    await page.getByLabel('New provider note').waitFor()
     consent = { moods: false, journals: false, quizzes: false, notes: false }
     const callsBefore = calls.length
     await page.getByRole('button', { name: 'Refresh sharing' }).click()
     await page.getByText('This patient has not shared any data types.', { exact: false }).waitFor()
+    assert.equal(await page.getByRole('tab', { name: 'Other shared data' }).getAttribute('aria-selected'), 'true')
     assert.equal(await page.getByRole('tab', { name: 'Provider notes' }).count(), 0)
     assert.equal(await page.getByText('Persistent test note', { exact: true }).count(), 0)
     assert.equal(calls.slice(callsBefore).filter(call => /clients\/10\/(moods|journals|quizzes|notes)$/.test(call.path)).length, 0)
@@ -340,6 +344,8 @@ try {
     await page.screenshot({ path: '../docs/PD5_MOBILE_VIEW.png', fullPage: true })
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.getByRole('button', { name: 'Open insights' }).click()
+    await page.getByText('Mood sharing is off.', { exact: false }).waitFor()
+    await page.getByRole('tab', { name: 'Other shared data' }).click()
     await page.getByText('This patient has not shared any data types.', { exact: false }).waitFor()
     await page.screenshot({ path: '../docs/PD5_CONSENT_VIEW.png', fullPage: true })
     linked = false
