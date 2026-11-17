@@ -1,7 +1,8 @@
-import { Activity, BellRing, BookOpen, Brain, ChartNoAxesCombined, ClipboardCheck, ClipboardList, CreditCard, Database, Flag, HandHeart, Heart, History, LayoutDashboard, LifeBuoy, Mail, MessageCircle, MessagesSquare, Package, ShieldCheck, Smile, Smartphone, Sparkles, Target, TrendingUp, UserRound, UserRoundCheck, UserRoundPlus, UsersRound, type LucideIcon } from "lucide-react"
+import { FlaskConical, Activity, BellRing, BookOpen, Brain, ChartNoAxesCombined, ClipboardCheck, ClipboardList, CreditCard, Database, Flag, HandHeart, Heart, History, LayoutDashboard, LifeBuoy, Mail, MessageCircle, MessagesSquare, Package, ShieldCheck, Smile, Smartphone, Sparkles, Target, TrendingUp, UserRound, UserRoundCheck, UserRoundPlus, UsersRound, type LucideIcon } from "lucide-react"
 
 type Visual = { icon: LucideIcon; tone: "blue" | "green" | "orange" | "yellow" }
 export const moduleVisuals = {
+ "development-access": { icon: FlaskConical, tone: "blue" },
  dashboard: { icon: LayoutDashboard, tone: "blue" }, datacenter: { icon: Database, tone: "green" },
  users: { icon: UsersRound, tone: "blue" }, moods: { icon: Smile, tone: "yellow" }, expressions: { icon: Heart, tone: "orange" },
  triggers: { icon: BellRing, tone: "orange" }, "user-triggers": { icon: Activity, tone: "orange" }, coping: { icon: HandHeart, tone: "green" }, "user-coping": { icon: LifeBuoy, tone: "green" },

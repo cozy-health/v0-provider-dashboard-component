@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRef, useState, useSyncExternalStore } from "react"
+import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { LoaderCircle } from "lucide-react"
 import { toast } from "sonner"
 import { api, ApiError, freshNavigation } from "@/lib/provider-api"
@@ -11,11 +11,17 @@ import { PasswordInput } from "@/components/auth/password-input"
 import { AuthCard } from "@/components/auth/auth-card"
 import { useCooldown } from "@/components/auth/use-cooldown"
 
+import { SignInProtection, type ProtectionView } from "./sign-in-protection"
+import { ProviderAccountBoundary } from "./account-boundary"
+import { browserScope } from "@/lib/provider-auth-scope"
+
 const subscribe = () => () => {}
 type Mode = "login" | "forgot" | "reset"
 export function LoginForm() {
   const ready = useSyncExternalStore(subscribe, () => true, () => false)
   const expired = ready && new URLSearchParams(window.location.search).has("expired")
+  const [protection, setProtection] = useState<ProtectionView>()
+  useEffect(() => { let active = true; api<ProtectionView>("auth/protection").then(value => { if (active) setProtection(value) }).catch(() => {}); return () => { active = false } }, [])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [email, setEmail] = useState("")
@@ -28,10 +34,13 @@ export function LoginForm() {
     setBusy(true); setError("")
     const normalizedEmail = email.trim().toLowerCase()
     try {
-      await api(`auth/${action === "login" ? "login" : action === "forgot" ? "forgot-password" : "reset-password"}`, {
+      const result = await api<Partial<ProtectionView>>(`auth/${action === "login" ? "login" : action === "forgot" ? "forgot-password" : "reset-password"}`, {
         method: "POST", body: JSON.stringify({ ...(fields ? Object.fromEntries(fields) : {}), email: normalizedEmail }),
       })
-      if (action === "login") freshNavigation("/")
+      if (action === "login") {
+        if (result.protection_required) setProtection(result as ProtectionView)
+        else freshNavigation("/")
+      }
       else if (action === "forgot") {
         setEmail(normalizedEmail); setMode("reset"); resend.start(60)
         if (mode === "reset") toast.success("If an account exists, a new reset code is on its way.")
@@ -54,6 +63,7 @@ export function LoginForm() {
     void perform(mode, fields)
   }
   const waiting = mode === "forgot" ? resend.remaining : attempts.remaining
+  if (protection) return <ProviderAccountBoundary scope={browserScope()}><SignInProtection initial={protection} /></ProviderAccountBoundary>
   return <AuthCard audience="Provider portal" title={mode === "login" ? "Provider sign in" : mode === "forgot" ? "Reset your password" : "Enter your reset code"}
     description={mode === "login" ? "Access the information your patients choose to share." : mode === "forgot" ? "We’ll email a six-digit code to your registered provider address." : "Use the latest code from your email. It expires after 15 minutes."}>
     {expired && mode === "login" && <p role="status" className="mb-5 rounded-lg bg-muted p-3 text-sm">Your session ended. Sign in again to continue.</p>}

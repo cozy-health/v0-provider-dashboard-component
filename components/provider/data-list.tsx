@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export function Loading() { return <div role="status" aria-label="Loading" className="space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><span className="sr-only">Loading…</span></div> }
 export function Empty({ children }: { children: React.ReactNode }) { return <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{children}</p> }
-export function Failure({ error, retry }: { error: string; retry: () => void }) { return <div role="alert" className="rounded-xl border p-6"><p className="mb-3 text-sm text-destructive">{error}</p><Button variant="outline" onClick={retry}>Try again</Button></div> }
+export function Failure({ error, retry }: { error: string; retry: () => void }) { return <div role="alert" className="rounded-xl border p-6"><p className="mb-3 text-sm text-foreground">{error}</p><Button variant="outline" onClick={retry}>Try again</Button></div> }
 export function useData<T>(path: string) {
   const [state, setState] = useState<{ data?: T; error?: string; loading: boolean }>({ loading: true })
   const [revision, setRevision] = useState(0)

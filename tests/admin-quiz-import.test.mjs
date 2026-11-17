@@ -12,6 +12,16 @@ test('valid imports normalize nullable descriptions and discard imported identif
   assert.deepEqual(input, before)
 })
 
+test('imports retain supported provenance and reject unsafe source URLs', () => {
+  const input = fixture()
+  input.scoring_rules.provenance = { license: 'Original fixture', approval_reference: 'Test only', source_url: 'https://example.test/source', ignored: 'discard' }
+  assert.deepEqual(validateQuizImport(input).scoring_rules.provenance, { license: 'Original fixture', approval_reference: 'Test only', source_url: 'https://example.test/source' })
+  for (const source_url of ['http://example.test', 'javascript:alert(1)', 'https://user:password@example.test', 'broken']) {
+    input.scoring_rules.provenance.source_url = source_url
+    assert.throws(() => validateQuizImport(input))
+  }
+})
+
 test('malformed structures never reach the editor', () => {
   for (const mutate of [v => { v.scoring_rules.bands = [null] }, v => { v.questions = [null] }, v => { v.questions[0].options = [null, null] }, v => { v.scoring_rules = [] }, v => { v.title = {} }, v => { v.description = [] }, v => { v.scoring_rules.bands[0].recommendation = {} }]) {
     const input = fixture(); mutate(input)

@@ -1,3 +1,4 @@
+import { assertBrowserScope, beginBrowserSignIn, browserScope, SCOPE_HEADER } from "./provider-auth-scope"
 import { mutationHeaders } from "./csrf"
 export class ApiError extends Error {
   constructor(public status: number, message: string, public retryAfter = 0) { super(message) }
@@ -6,24 +7,57 @@ export class ApiError extends Error {
 // A full document navigation discards patient data in React memory on auth changes.
 export function freshNavigation(path: string) { window.location.replace(new URL(path, window.location.origin).href) }
 
+const responseScopes = new WeakMap<Response, string | null>()
+export function assertProviderResponse(response: Response) { assertBrowserScope(responseScopes.get(response) ?? null) }
+export async function providerFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const starting = ['auth/login', 'auth/register'].includes(path) && options.method === 'POST'
+  const scope = starting ? beginBrowserSignIn() : browserScope()
+  assertBrowserScope(scope)
+  const csrf = await mutationHeaders(options.method)
+  assertBrowserScope(scope)
+  const response = await fetch(`/api/provider/${path}`, { ...options, cache: 'no-store', credentials: 'same-origin', headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-Cozy-Request': '1', ...options.headers, ...csrf, ...(scope ? { [SCOPE_HEADER]: scope } : {}) } })
+  assertBrowserScope(scope)
+  if (response.status === 401 && !path.startsWith('auth/')) freshNavigation('/login?expired=1')
+  if (response.status === 403) {
+    const failure: unknown = await response.clone().json().catch(() => null)
+    assertBrowserScope(scope)
+    if (failure && typeof failure === 'object' && 'code' in failure && failure.code === 'signin_verification_required') freshNavigation('/login?expired=1')
+    if (failure && typeof failure === 'object' && 'code' in failure && failure.code === 'consent_required' && !['consent-config', 'me/consents'].includes(path)) window.dispatchEvent(new Event('cozy:consent-required'))
+  }
+  responseScopes.set(response, scope)
+  return response
+}
+export function providerMediaUrl(path: string) {
+  const scope = browserScope()
+  return `/api/provider/${path}${scope ? `?scope=${scope}` : ''}`
+}
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api/provider/${path}`, { ...options, cache: "no-store", credentials: "same-origin", headers: { ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }), "X-Cozy-Request": "1", ...options.headers, ...await mutationHeaders(options.method) } })
+  const response = await providerFetch(path, options)
   const data = await response.json().catch(() => ({}))
+  assertProviderResponse(response)
   if (!response.ok) {
-    if (response.status === 401) freshNavigation("/login?expired=1")
-    const validation = data.errors ? Object.values(data.errors).flat().join(" ") : null
-    const retryAfter = Number(response.headers.get("Retry-After"))
-    throw new ApiError(response.status, validation || data.message || "Request failed. Please retry.", Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 0)
+    const validation = data.errors ? Object.values(data.errors).flat().join(' ') : null
+    const retryAfter = Number(response.headers.get('Retry-After'))
+    throw new ApiError(response.status, validation || data.message || 'Request failed. Please retry.', Number.isFinite(retryAfter) && retryAfter > 0 && retryAfter <= 86400 ? retryAfter : 0)
   }
   return data as T
 }
-
 export type Provider = { id: number; name: string; email: string; practice: string | null; timezone: string; is_verified: boolean; license_number: string | null; license_state: string | null }
 export type ConsentType = "moods" | "journals" | "quizzes" | "notes"
-export type Client = { user_id: number; name: string; linked_at: string; consent_flags: Record<ConsentType, boolean>; gender?: string; date_of_birth?: string }
+export type InsightPeriodKey = "week" | "month" | "year"
+export type InsightPeriod = { key: InsightPeriodKey; label: string; start: string; end: string; timezone: string; bucket_unit: "day" | "month" }
+export type MoodPriority = { level: "high" | "moderate" | "low" | null; status: "high" | "moderate" | "low" | "no_negative" | "no_checkins"; negative_days: number; explanation: string; period?: InsightPeriod }
+export type NamedCount = { name: string; count: number }
+export type InsightCounts = { positive: number; negative: number; neutral: number; unclassified: number }
+export type MoodSummary = { period: InsightPeriod; priority: MoodPriority; coverage: { check_ins: number; recorded_days: number; possible_days: number }; counts: InsightCounts; average_intensity: number | null; moods: NamedCount[]; triggers: NamedCount[]; coping_strategies: NamedCount[]; latest_check_in: string | null }
+export type Client = { user_id: number; name: string; linked_at: string; consent_flags: Record<ConsentType, boolean>; mood_summary: MoodSummary | null; gender?: string; date_of_birth?: string }
+export type InsightBucket = InsightCounts & { key: string; label: string; start: string; end: string; check_ins: number; average_intensity: number | null }
+export type MoodInsights = { period: InsightPeriod; priority: MoodPriority; current_priority: MoodPriority; coverage: MoodSummary["coverage"]; counts: InsightCounts; average_intensity: number | null; moods: NamedCount[]; triggers: NamedCount[]; coping_strategies: NamedCount[]; buckets: InsightBucket[]; trend: { previous_bucket: string; latest_bucket: string; check_in_change: number; intensity_change: number | null } | null }
 export type Page<T> = { data: T[]; current_page: number; last_page: number; total: number }
 export type Mood = { id: string; mood: string; intensity: number; triggers: string[] | null; custom_trigger: string | null; coping_strategies: string[] | null; coping_helped: string | null; client_created_at: string | null; created_at: string }
 export type Journal = { id: string; title: string | null; type: string; word_count: number; has_voice: boolean; created_at: string }
+// Fetch online for one explicitly shared copy. Never persist its entry in browser storage.
+export type SharedJournalCopy = { share_id: string; entry: { title: string; body: string } & ({ kind: "voice"; audio: { id: string; duration: number; media_type: string } } | { kind?: "written"; audio?: never }); shared_at: string; later_edits_shared: false }
 export type Assessment = { id: string; quiz_slug: string; score: number; interpretation: string; completed_at: string }
 export type QuizShare = { id: number; user_id: number; sender: string; quiz_title: string; completed_at: string; read_at: string | null }
 export type SharedQuizResult = Assessment & { quiz_title: string; maximum_score: number; disclaimer: string; recommendation: string }

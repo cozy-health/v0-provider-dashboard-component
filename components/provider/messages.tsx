@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { SharedJournalReview } from "./shared-journal-review"
 import { VoiceMessage } from "./voice-message"
 import { VoiceRecorder } from "./voice-recorder"
 import { api } from "@/lib/provider-api"
@@ -81,7 +82,7 @@ export function Messages({ userId }: { userId?: number }) {
         {selected && more && messages.length > 0 && <Button variant="ghost" onClick={older}>Load earlier messages</Button>}
         {selected && !messages.length && <p className="text-sm text-muted-foreground">Start a conversation with your patient.</p>}
         {(selected ? messages : []).map(m => <article key={m.id} className={`rounded-2xl ${m.records.length ? "w-full max-w-[94%] sm:max-w-lg " + (m.sender === "provider" ? "self-end" : "self-start") : "max-w-[90%] p-3 sm:max-w-[75%] " + (m.sender === "provider" ? "self-end bg-primary text-primary-foreground" : "self-start bg-muted")}`}>
-          {m.records.map(r => <SharedRecordCard key={`${r.type}-${r.id}`} record={r} />)}
+          {m.records.map(r => r.type === "journal_shares" && selected !== null ? <SharedJournalReview key={`${selected}-${r.id}`} conversationId={selected} shareId={r.id} /> : <SharedRecordCard key={`${r.type}-${r.id}`} record={r} />)}
           {m.audio && <VoiceMessage id={m.audio.id} duration={m.audio.duration} />}
           <p className="whitespace-pre-wrap break-words">{m.content}</p>{m.records.length === 0 && <time className="mt-1 block text-right text-xs opacity-75">{new Date(m.created_at).toLocaleString()}</time>}
         </article>)}

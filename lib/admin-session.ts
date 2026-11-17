@@ -37,16 +37,33 @@ export function validAdminOrigin(request: Request) {
   return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1" && validCsrf(request)
 }
 export function adminRoute(path: string, method: string) {
+  const uuid = "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
+  if (method === "GET" && path === "community-moderation") return true
+  if (method === "POST" && (path === "community-moderation/bans" || new RegExp(`^community-moderation/(bans/${uuid}/lift|appeals/${uuid}/review)$`).test(path))) return true
+  if (method === "GET" && /^support\/[1-9][0-9]*\/thread$/.test(path)) return true
+  if (method === "POST" && (/^support\/[1-9][0-9]*\/replies$/.test(path) || new RegExp(`^support/[1-9][0-9]*/messages/${uuid}/retry$`).test(path))) return true
+  if (method === "GET" && (path === "privacy-requests" || new RegExp(`^privacy-requests/${uuid}$`).test(path))) return true
+  if (method === "POST" && new RegExp(`^privacy-requests/${uuid}/process$`).test(path)) return true
+  if (method === "GET" && path === "student-school-requests") return true
+  if (method === "POST" && new RegExp(`^student-school-requests/${uuid}/review$`).test(path)) return true
+  if (["GET", "POST"].includes(method) && path === "student-email-domains") return true
+  if (method === "PUT" && /^student-email-domains\/[1-9][0-9]*$/.test(path)) return true
+  if (["GET", "POST"].includes(method) && path === "development-access") return true
+  if (method === "DELETE" && /^development-access\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
+  if (["GET", "POST"].includes(method) && path === "articles") return true
+  if (["GET", "PUT", "DELETE"].includes(method) && /^articles\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
+  if (method === "POST" && /^articles\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/publish$/.test(path)) return true
   if (method === "GET" && (path === "student-applications" || /^student-applications\/[a-f0-9-]{36}\/evidence$/.test(path))) return true
   if (method === "POST" && /^student-applications\/[a-f0-9-]{36}\/review$/.test(path)) return true
   const catalog = "content/(moods|expressions|triggers|coping|communities|challenges|packages)"
+  if (method === "GET" && /^content\/packages\/\d+$/.test(path)) return true
   if (method === "GET" && path === "subscriptions/history") return true
   if (method === "GET" && /^community\/(posts|comments|members)$/.test(path)) return true
   if (method === "GET" && /^community\/(posts|comments)\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
   if (method === "PUT" && /^community\/(posts|comments)\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path)) return true
   if (method === "DELETE" && /^community\/members\/\d+$/.test(path)) return true
   if (method === "GET") return /^(operations\/summary|auth\/session|metrics\/(overview|usage|retention|safety|insights)|users|quizzes|reports|support|subscriptions|emails|emails\/[a-z-]+\/preview|(?:reports|support)\/\d+|reports\/\d+\/target)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
-  if (method === "POST") return /^(auth\/(login|logout)|quizzes|quizzes\/\d+\/publish|emails\/test)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
+  if (method === "POST") return /^(auth\/(login|logout)|quizzes|quizzes\/preview|quizzes\/\d+\/publish|emails\/test)$/.test(path) || new RegExp(`^${catalog}$`).test(path)
   if (method === "PUT") return /^(quizzes|reports|support)\/\d+$/.test(path) || new RegExp(`^${catalog}/\\d+$`).test(path)
   if (method === "DELETE") return /^(quizzes)\/\d+$/.test(path) || new RegExp(`^${catalog}/\\d+$`).test(path)
   return false

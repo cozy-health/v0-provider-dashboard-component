@@ -10,8 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useCooldown } from "@/components/auth/use-cooldown"
 
+import { SignInProtection, type ProtectionView } from "./sign-in-protection"
+import { ProviderAccountBoundary } from "./account-boundary"
+import { browserScope } from "@/lib/provider-auth-scope"
+
 const subscribe = () => () => {}
 export function ProviderRegistration() {
+ const [protection, setProtection] = useState<ProtectionView>()
  const ready = useSyncExternalStore(subscribe, () => true, () => false)
  const [busy, setBusy] = useState(false), [error, setError] = useState("")
  const cooldown = useCooldown()
@@ -23,10 +28,12 @@ export function ProviderRegistration() {
   if (password !== fields.get("password_confirmation")) { setError("Passwords must match."); return }
   setBusy(true); setError("")
   try {
-   await api("auth/register", { method: "POST", body: JSON.stringify({ name: `${String(fields.get("first_name")).trim()} ${String(fields.get("last_name")).trim()}`, email: String(fields.get("email")).trim().toLowerCase(), practice: String(fields.get("practice")).trim() || null, password, password_confirmation: password }) })
-   freshNavigation("/provider")
+   const result = await api<Partial<ProtectionView>>("auth/register", { method: "POST", body: JSON.stringify({ name: `${String(fields.get("first_name")).trim()} ${String(fields.get("last_name")).trim()}`, email: String(fields.get("email")).trim().toLowerCase(), practice: String(fields.get("practice")).trim() || null, password, password_confirmation: password }) })
+   if (result.protection_required) setProtection(result as ProtectionView)
+   else freshNavigation("/provider")
   } catch (err) { setError((err as Error).message); if (err instanceof ApiError && err.status === 429) cooldown.start(err.retryAfter || 60); setBusy(false) }
  }
+ if (protection) return <ProviderAccountBoundary scope={browserScope()}><SignInProtection initial={protection} /></ProviderAccountBoundary>
  return <AuthCard audience="Provider portal" title="Create provider account" description="Your Cozy workspace starts here. You can add patients whenever you are ready.">
   <form onSubmit={submit} aria-busy={busy} className="space-y-5">
    <fieldset disabled={busy} className="space-y-4">

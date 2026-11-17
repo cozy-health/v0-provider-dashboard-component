@@ -14,15 +14,19 @@ import "./admin-theme.css"
 import { AdminIcon, moduleVisual } from "./admin-visuals"
 const groups: { label: string; items: [string, string][] }[] = [
  { label: "Overview", items: [["/admin", "Overview"], ["/admin/datacenter", "Analytics"], ["/admin/safety", "Safety"]] },
- { label: "People & Wellness", items: adminModules.filter(([key]) => ["users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
- { label: "Community", items: adminModules.filter(([key]) => ["communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
- { label: "Operations", items: adminModules.filter(([key]) => ["packages", "subscriptions", "student-applications", "subscription-events", "emails", "support"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
+ { label: "People & Wellness", items: adminModules.filter(([key]) => ["articles", "users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
+ { label: "Community", items: adminModules.filter(([key]) => ["community-moderation", "communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
+ { label: "Operations", items: adminModules.filter(([key]) => ["packages", "subscriptions", "student-applications", "subscription-events", "development-access", "emails", "support", "privacy-requests"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
 ]
 function capability(href: string) {
  const moduleKey = href.split("/").pop()
+ if (moduleKey === "community-moderation") return "admin:moderation"
+ if (moduleKey === "development-access") return "admin:development-access"
+ if (moduleKey === "support") return "admin:support"
+ if (moduleKey === "privacy-requests") return "admin:privacy"
  if (["users"].includes(moduleKey!)) return "admin:users"
  if (["reports", "support", "posts", "comments", "members"].includes(moduleKey!)) return "admin:moderation"
- if (["packages", "subscriptions", "subscription-events"].includes(moduleKey!)) return "admin:subscriptions"
+ if (["packages", "subscriptions", "subscription-events", "student-applications"].includes(moduleKey!)) return "admin:subscriptions"
  if (moduleKey === "emails") return "admin:email"
  return href.includes("/manage/") && !["user-triggers", "user-coping"].includes(moduleKey!) ? "admin:content" : "admin:metrics"
 }

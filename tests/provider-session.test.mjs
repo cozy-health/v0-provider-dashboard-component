@@ -8,6 +8,10 @@ process.env.PROVIDER_SESSION_SECRET = randomBytes(32).toString('hex')
 process.env.PROVIDER_DASHBOARD_ORIGIN = 'https://dashboard.example.test'
 
 test('messaging bridge permits only conversation reads, sends and read markers', () => {
+  assert.equal(allowedRoute('overview', 'GET'), true)
+  assert.equal(allowedRoute('clients/12/insights', 'GET'), true)
+  for (const method of ['POST', 'PATCH', 'DELETE']) assert.equal(allowedRoute('clients/12/insights', method), false)
+  for (const method of ['POST', 'PUT', 'DELETE']) assert.equal(allowedRoute('overview', method), false)
   assert.equal(allowedRoute('conversations', 'GET'), true)
   assert.equal(allowedRoute('conversations/12/messages', 'GET'), true)
   assert.equal(allowedRoute('conversations/12/messages', 'POST'), true)
@@ -15,6 +19,21 @@ test('messaging bridge permits only conversation reads, sends and read markers',
   assert.equal(allowedRoute('conversations/12/messages', 'DELETE'), false)
   assert.equal(allowedRoute('conversations/12/records', 'GET'), false)
   assert.equal(allowedRoute('provider-conversations', 'GET'), false)
+})
+
+test('journal copy bridge permits recipient reads without exposing share mutations', () => {
+  const id = '13bfa531-5709-445b-802c-7b04cd4d699d'
+  const path = `conversations/12/journal-shares/${id}`
+  assert.equal(allowedRoute(path, 'GET'), true)
+  for (const method of ['POST', 'PATCH', 'DELETE']) assert.equal(allowedRoute(path, method), false)
+  for (const invalid of [
+    'conversations/12/journal-shares',
+    'conversations/12/journal-shares/preview',
+    'conversations/12/journal-shares/not-a-uuid',
+    `provider-conversations/12/journal-shares/${id}`,
+    `conversations/12/journal-shares/${id}/other`,
+    `conversations/12/journal-shares/../${id}`,
+  ]) assert.equal(allowedRoute(invalid, 'GET'), false)
 })
 
 test('session encrypts credentials, authenticates ciphertext and enforces expiry', () => {

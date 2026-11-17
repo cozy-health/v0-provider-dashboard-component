@@ -106,10 +106,15 @@ try {
   const playwright = await import(pathToFileURL(playwrightPath).href)
   browser = await playwright.chromium.launch({ headless: true, ...(process.env.PROVIDER_CHROMIUM_PATH ? { executablePath: process.env.PROVIDER_CHROMIUM_PATH } : {}) })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } }), errors = []
+  await page.context().routeWebSocket('**/_next/webpack-hmr**', () => {})
   page.on('pageerror', error => errors.push(error.message))
   page.on('console', message => { if (message.type() === 'error') console.error('Browser console:', message.text()) })
   await page.goto(`${origin}/admin`)
-  await page.waitForFunction(() => !document.querySelector('button[type="submit"]')?.disabled)
+  await page.waitForURL('**/admin/login')
+  await page.waitForFunction(() => {
+    const submit = document.querySelector('form button[type="submit"]')
+    return submit instanceof HTMLButtonElement && !submit.disabled
+  })
   await page.getByLabel('Email', { exact: true }).fill('operator@example.test')
   await page.getByLabel('Password', { exact: true }).fill('fixture-only')
   await page.getByRole('button', { name: 'Show password', exact: true }).click()
@@ -218,7 +223,8 @@ try {
   assert.equal(await page.getByLabel('Password', { exact: true }).inputValue(), '')
 
   let providerResetRequests = 0
-  await page.route('**/api/provider/auth/*', async route => {
+  await page.route(/\/api\/provider\/auth\/(?:forgot-password|reset-password)(?:\?.*)?$/, async route => {
+    assert.equal(route.request().method(), 'POST')
     const data = route.request().postDataJSON()
     assert.equal(data.email, 'provider@example.test')
     if (route.request().url().endsWith('reset-password')) providerResetRequests++
