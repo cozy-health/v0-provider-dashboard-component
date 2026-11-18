@@ -127,3 +127,40 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  :where(.cozy-admin, .cozy-provider) main h1 {
+    font-size: clamp(1.5rem, 1.1rem + 1vw, 2rem);
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    overflow-wrap: anywhere;
+  }
+  :where(.cozy-admin, .cozy-provider) main h2 {
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  :where(.cozy-admin, .cozy-provider) select {
+    min-height: 2.75rem;
+    max-width: 100%;
+    color: var(--foreground);
+  }
+  :where(.cozy-admin, .cozy-provider) main input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+    min-height: 2.75rem;
+  }
+  :where(.cozy-admin, .cozy-provider) input[type='checkbox'] {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    accent-color: var(--cozy-blue);
+  }
+  :where(.cozy-admin, .cozy-provider) textarea {
+    line-height: 1.6;
+  }
+  @media (max-width: 640px) {
+    :where(.cozy-admin, .cozy-provider) input:not([type='checkbox']):not([type='radio']),
+    :where(.cozy-admin, .cozy-provider) select,
+    :where(.cozy-admin, .cozy-provider) textarea {
+      font-size: 1rem;
+    }
+  }
+}

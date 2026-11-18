@@ -23,3 +23,43 @@ jobs:
       - run: npm run build
         env:
           COZY_DEPLOYMENT_ENV: production
+  browser-contracts:
+    name: ${{ matrix.suite }} browser contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [admin, admin-management, provider]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Install pinned browser test runner
+        run: npm install --no-save --package-lock=false playwright@1.65.1
+      - run: npx playwright install --with-deps chromium
+      - name: Run isolated contracts and browser regressions
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: |
+          mkdir -p ../docs/validation/admin-phases
+          export ADMIN_PLAYWRIGHT_PATH="$PWD/node_modules/playwright/index.mjs"
+          export PROVIDER_PLAYWRIGHT_PATH="$PWD/node_modules/playwright/index.mjs"
+          node --experimental-strip-types "tests/$SUITE-integration.mjs"
+      - name: Collect synthetic browser evidence
+        if: always()
+        run: |
+          mkdir -p scratch/browser-evidence
+          if [ -d ../docs ]; then cp -R ../docs scratch/browser-evidence/docs; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-${{ matrix.suite }}-evidence
+          path: |
+            scratch/theme-review/
+            scratch/browser-evidence/
+          if-no-files-found: ignore
+          retention-days: 7

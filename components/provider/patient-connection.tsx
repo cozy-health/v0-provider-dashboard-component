@@ -39,7 +39,7 @@ export function PatientConnection({ email, close, connected }: { email: string; 
    </>}
   </fieldset>
   {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-  <div className="flex flex-wrap justify-end gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => { if (preview) { setPreview(null); setCare(false); setRevocation(false) } else close() }}>{preview ? "Change code" : "Cancel"}</Button><Button disabled={busy || (preview !== null && (!care || !revocation))}>{busy ? "Please wait..." : preview ? "Agree & connect" : "Review invitation"}</Button></div>
+  <div className="flex flex-wrap justify-end gap-2 border-t pt-4"><Button type="button" variant="outline" disabled={busy} onClick={() => { if (preview) { setPreview(null); setCare(false); setRevocation(false) } else close() }}>{preview ? "Change code" : "Cancel"}</Button><Button disabled={busy || (preview !== null && (!care || !revocation))}>{busy ? "Please wait..." : preview ? "Agree & connect" : "Review invitation"}</Button></div>
   </form>
  </DialogContent></Dialog>
 }

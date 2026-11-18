@@ -61,6 +61,6 @@ export function AdminShell({ expires, children, name = "Admin", capabilities = [
     <div className="border-t p-4">{error && <p role="alert" className="mb-3 break-words text-sm text-destructive">{error}</p>}{signOut}</div>
    </SheetContent>
   </Sheet>
-  <div className="flex"><aside style={{ top: headerHeight, height: `calc(100dvh - ${headerHeight}px)` }} className="sticky hidden w-60 shrink-0 overflow-y-auto border-r bg-card p-4 lg:block">{navigation}</aside><main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 xl:p-10">{error && <p role="alert" className="mb-4 text-destructive">{error}</p>}{children}</main></div>
+  <div className="flex"><aside style={{ top: headerHeight, height: `calc(100dvh - ${headerHeight}px)` }} className="sticky hidden w-64 shrink-0 overflow-y-auto overscroll-contain border-r bg-card p-4 lg:block">{navigation}</aside><main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8"><div className="mx-auto w-full max-w-[100rem]">{error && <p role="alert" className="mb-4 text-destructive">{error}</p>}{children}</div></main></div>
  </div>
 }

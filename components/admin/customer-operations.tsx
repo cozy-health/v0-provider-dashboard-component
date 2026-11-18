@@ -1,4 +1,5 @@
 "use client"
+import { ContentSkeleton } from "@/components/ui/content-skeleton"
 
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
@@ -76,7 +77,7 @@ export function SupportWorkspace() {
     {error && <p role="alert" className="text-destructive">{error}</p>}
     <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <div className="min-w-0 space-y-3">
-        {list.state?.error ? <p role="alert">{list.state.error}</p> : !list.state?.data ? <p role="status">Loading conversations…</p> : <>
+        {list.state?.error ? <p role="alert">{list.state.error}</p> : !list.state?.data ? <ContentSkeleton label="Loading conversations…" /> : <>
           {list.state.data.data.length === 0 && <p>No conversations match this filter.</p>}
           {list.state.data.data.map(row => <Button className="h-auto min-h-12 w-full justify-start whitespace-normal text-left" variant="outline" disabled={busy} key={row.id} onClick={() => choose(row.id)}>{row.subject} · {row.status} · #{row.id}</Button>)}
           <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy || page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span className="self-center">Page {page}</span><Button variant="outline" disabled={busy || page >= list.state.data.last_page} onClick={() => setPage(value => value + 1)}>Next</Button></div>
@@ -129,7 +130,7 @@ export function PrivacyWorkspace() {
     <p className="text-sm text-muted-foreground">Process identity-verified customer requests. Support and moderation permissions do not grant privacy access. Exports are downloaded by the customer.</p>
     <label className="block max-w-xs text-sm">Filter privacy status<select className={field} disabled={busy} value={status} onChange={event => { setStatus(event.target.value); setPage(1) }}><option value="">All</option>{["pending", "processing", "held", "completed", "declined", "failed"].map(value => <option key={value}>{value}</option>)}</select></label>
     {error && record === null && <p role="alert" className="text-destructive">{error}</p>}{notice && <p role="status">{notice}</p>}
-    {!list.state ? <p role="status">Loading requests…</p> : list.state.error ? <p role="alert">{list.state.error}</p> : list.state.data && <>
+    {!list.state ? <ContentSkeleton label="Loading requests…" /> : list.state.error ? <p role="alert">{list.state.error}</p> : list.state.data && <>
       {list.state.data.data.length === 0 && <p>No requests match this filter.</p>}
       <div className="space-y-3">{list.state.data.data.map(row => <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"><p>Customer #{row.user_id} · {row.kind} · {row.status}</p><Button variant="outline" disabled={busy} onClick={() => void open(row.id)}>Review {row.kind} request</Button></div>)}</div>
       <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy || page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span className="self-center">Page {page}</span><Button variant="outline" disabled={busy || page >= list.state.data.last_page} onClick={() => setPage(value => value + 1)}>Next</Button></div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { api, providerMediaUrl, type SharedJournalCopy } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
+import { ContentSkeleton } from "@/components/ui/content-skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 /** Explicit online review; full text never enters conversation cache or browser storage. */
@@ -44,7 +45,7 @@ export function SharedJournalReview({ conversationId, shareId }: { conversationI
     <Dialog open={open} onOpenChange={value => { if (!value) close() }}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader><DialogTitle>Shared journal copy</DialogTitle><DialogDescription>The patient explicitly shared this copy. Later edits remain private. Access ends when sharing is withdrawn.</DialogDescription></DialogHeader>
-        {loading && <p role="status">Loading shared copy…</p>}
+        {loading && <ContentSkeleton label="Loading shared copy…" rows={2} />}
         {error && <p role="alert">{error}</p>}
         {copy && <article><h3 className="break-words font-semibold">{copy.entry.title || "Untitled journal"}</h3>
           {copy.entry.kind === "voice" && copy.entry.audio
