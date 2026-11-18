@@ -49,13 +49,17 @@ jobs:
           export ADMIN_PLAYWRIGHT_PATH="$PWD/node_modules/playwright/index.mjs"
           export PROVIDER_PLAYWRIGHT_PATH="$PWD/node_modules/playwright/index.mjs"
           node --experimental-strip-types "tests/$SUITE-integration.mjs"
+      - name: Collect synthetic browser evidence
+        if: always()
+        run: |
+          mkdir -p scratch/browser-evidence
+          if [ -d ../docs ]; then cp -R ../docs scratch/browser-evidence/docs; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: dashboard-${{ matrix.suite }}-evidence
           path: |
             scratch/theme-review/
-            ../docs/*.png
-            ../docs/validation/
+            scratch/browser-evidence/
           if-no-files-found: ignore
           retention-days: 7
