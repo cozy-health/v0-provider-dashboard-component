@@ -1,4 +1,5 @@
 'use client'
+import { ContentSkeleton } from '@/components/ui/content-skeleton'
 
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi } from '@/lib/admin-api'
@@ -44,7 +45,7 @@ export function StudentSchoolRequests() {
     <p>Notifications go to team@cozyhealth.org and cozyhealth.hq@gmail.com.</p>
     {message && <p role="status">{message}</p>}
     <Button variant="outline" disabled={busy || loading} onClick={() => void load()}>Refresh school requests</Button>
-    {loading ? <p role="status">Loading school requests...</p> : rows.length === 0 ? <p>No school requests.</p> : rows.map(row => <article className="rounded border p-4 space-y-3" key={row.id}>
+    {loading ? <ContentSkeleton label="Loading school requests..." /> : rows.length === 0 ? <p>No school requests.</p> : rows.map(row => <article className="rounded border p-4 space-y-3" key={row.id}>
       <h3 className="font-semibold">{row.institution}</h3>
       <p className="break-all">{row.domain} · {row.status}</p>
       <p className="break-all">Submitted website (unverified): {row.website}</p>

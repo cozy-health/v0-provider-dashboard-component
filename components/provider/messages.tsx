@@ -73,8 +73,8 @@ export function Messages({ userId }: { userId?: number }) {
     finally { setSending(false) }
   }
   if (loading) return <Loading />
-  return <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-    <aside aria-label="Conversations" className="space-y-2">{threads.length ? threads.map(t => <Button disabled={sending || voiceBusy} key={t.id} variant={selected === t.id ? "secondary" : "outline"} className="h-auto w-full justify-between whitespace-normal text-left" onClick={() => { setSelected(t.id); setError("") }}>{t.name}{t.unread > 0 && <span className="rounded-full bg-primary px-2 text-primary-foreground">{t.unread}</span>}</Button>) : <p>No connected patients yet.</p>}</aside>
+  return <div className="grid items-start gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
+    <aside aria-label="Conversations" className="min-w-0 space-y-2 rounded-2xl border bg-card p-4"><h2 className="mb-3 text-sm font-semibold">Conversations</h2>{threads.length ? threads.map(t => <Button disabled={sending || voiceBusy} key={t.id} variant={selected === t.id ? "secondary" : "outline"} aria-pressed={selected === t.id} className="h-auto w-full justify-between whitespace-normal text-left" onClick={() => { setSelected(t.id); setError("") }}><span className="min-w-0 break-words">{t.name}</span>{t.unread > 0 && <span className="rounded-full bg-primary px-2 text-primary-foreground">{t.unread}</span>}</Button>) : <p className="text-sm leading-relaxed text-muted-foreground">No connected patients yet. Accept a patient invitation from Patients to start a conversation.</p>}</aside>
     <section aria-label="Conversation" className="min-w-0 rounded-2xl border bg-card p-4">
       <h2 className="mb-4 font-semibold">{threads.find(t => t.id === selected)?.name ?? "Messages"}</h2>
       {error && <div role="alert" className="mb-3 text-destructive">{error} <Button variant="outline" onClick={refresh}>Retry</Button></div>}
@@ -87,7 +87,7 @@ export function Messages({ userId }: { userId?: number }) {
           <p className="whitespace-pre-wrap break-words">{m.content}</p>{m.records.length === 0 && <time className="mt-1 block text-right text-xs opacity-75">{new Date(m.created_at).toLocaleString()}</time>}
         </article>)}
       </div>
-      <form className="mt-4 flex items-end gap-2" onSubmit={e => { e.preventDefault(); void send() }}><textarea aria-label="Message" placeholder="Write a message…" maxLength={5000} disabled={!selected || sending || voiceBusy} value={draft} onChange={e => setDraft(e.target.value)} className="min-h-12 min-w-0 flex-1 rounded-xl border bg-background p-3" />{selected && !sending && <VoiceRecorder key={selected} conversationId={selected} onBusy={setVoiceBusy} onSent={async () => { const page = await api<{ data: Message[] }>(`conversations/${selected}/messages`); setMessages(page.data) }} />}<Button type="submit" disabled={!selected || sending || voiceBusy || !draft.trim()}>{sending ? "Sending…" : error ? "Retry send" : "Send"}</Button></form>
+      <form className="mt-4 flex flex-wrap items-end justify-end gap-2 border-t pt-4" onSubmit={e => { e.preventDefault(); void send() }}><textarea aria-label="Message" placeholder="Write a message…" maxLength={5000} disabled={!selected || sending || voiceBusy} value={draft} onChange={e => setDraft(e.target.value)} className="min-h-12 max-h-40 w-full min-w-0 resize-y rounded-xl border bg-background p-3 text-base sm:w-auto sm:flex-1 sm:text-sm" />{selected && !sending && <VoiceRecorder key={selected} conversationId={selected} onBusy={setVoiceBusy} onSent={async () => { const page = await api<{ data: Message[] }>(`conversations/${selected}/messages`); setMessages(page.data) }} />}<Button type="submit" disabled={!selected || sending || voiceBusy || !draft.trim()}>{sending ? "Sending…" : error ? "Retry send" : "Send"}</Button></form>
     </section>
   </div>
 }

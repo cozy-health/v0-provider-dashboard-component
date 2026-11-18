@@ -1,4 +1,5 @@
 'use client'
+import { ContentSkeleton } from '@/components/ui/content-skeleton'
 
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi } from '@/lib/admin-api'
@@ -59,7 +60,7 @@ export function StudentDomains() {
     </form>
     {notice && <p role="status">{notice}</p>}
     {error && <div role="alert"><p>{error}</p><Button variant="outline" disabled={busy} onClick={() => void load()}>Refresh student domains</Button></div>}
-    {loading ? <p role="status">Loading student domains…</p> : !error && !domains.length ? <p>No exception or blocked domains. Institutional .edu.ng email verification remains available.</p> : null}
+    {loading ? <ContentSkeleton label="Loading student domains…" /> : !error && !domains.length ? <p>No exception or blocked domains. Institutional .edu.ng email verification remains available.</p> : null}
     {!loading && domains.map(row => <article className="rounded border p-4" key={row.id}>
       <h3 className="break-all font-semibold">{row.domain}</h3><p>{row.institution} · {row.enabled ? 'Enabled' : 'Disabled'}</p>
       <Button variant="outline" aria-label={`${row.enabled ? 'Disable' : 'Enable'} ${row.domain}`} disabled={busy || !!error} onClick={() => void save(row)}>{row.enabled ? 'Disable domain' : 'Enable domain'}</Button>

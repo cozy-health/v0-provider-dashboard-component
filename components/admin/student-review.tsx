@@ -1,4 +1,5 @@
 'use client'
+import { ContentSkeleton } from '@/components/ui/content-skeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminApi } from '@/lib/admin-api'
 import { Button } from '@/components/ui/button'
@@ -54,7 +55,7 @@ export function StudentReview() {
     <p className="max-w-2xl text-sm text-muted-foreground">New applicants verify Nigerian academic email; document submissions are disabled at launch. Historical document applications remain locked and evidence is deleted after a decision or 14 days. Eligibility renewal opens 30 days before expiry and never grants a paid subscription.</p>
     {notice && <p role="status">{notice}</p>}
     {error && <div role="alert"><p>{error}</p><Button variant="outline" onClick={() => load()}>Retry applications</Button></div>}
-    {loading && <p role="status">Loading student applications…</p>}
+    {loading && <ContentSkeleton label="Loading student applications…" />}
     {!loading && !error && !applications.length && <p>No student applications.</p>}
     <div className="space-y-4">{applications.map(application => <article key={application.id} className="rounded-xl border p-5"><h2 className="font-semibold">{application.institution}</h2><p>{application.status} · Institution email {application.email_verified_at ? 'confirmed' : 'not confirmed'}</p><p>{application.institution_email}</p>
       <p>Verification: {application.verification_method === 'email' ? 'Student-only email' : 'Admin document review'}</p>

@@ -106,7 +106,7 @@ try {
  assert.equal(await page.getByRole('button', { name: 'Switch to light mode' }).count(), 1)
  await page.getByRole('button', { name: 'Switch to light mode' }).click()
  await page.waitForFunction(() => !document.documentElement.classList.contains('dark'))
- assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
+ assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(248, 250, 252)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
    const css = getComputedStyle(el);
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());
@@ -123,6 +123,22 @@ try {
  await page.getByRole('link', { name: 'Cozy Coping Mechanisms', exact: true }).click()
  await page.getByText('There are no records to display', { exact: true }).waitFor()
  await page.getByRole('button', { name: 'Create Coping Mechanism', exact: true }).click()
+ await page.setViewportSize({ width: 390, height: 844 })
+ const editor = page.getByRole('dialog')
+ await editor.getByRole('heading', { name: 'Create Cozy Coping Mechanisms', exact: true }).waitFor()
+ // Wait for the existing entry transition before measuring the hit area.
+ await page.waitForFunction(() => document.querySelector('[data-slot="dialog-content"]')?.getAnimations().every(animation => animation.playState === 'finished'))
+ const editorBounds = await editor.evaluate(element => {
+  const rect = element.getBoundingClientRect()
+  const close = element.querySelector('[data-slot="dialog-close"]').getBoundingClientRect()
+  return { top: rect.top, bottom: rect.bottom, right: rect.right, closeWidth: close.width, closeHeight: close.height, viewportWidth: innerWidth, viewportHeight: innerHeight }
+ })
+ assert.ok(editorBounds.closeWidth >= 44 && editorBounds.closeHeight >= 44, JSON.stringify(editorBounds))
+ assert.ok(editorBounds.top >= 0 && editorBounds.bottom <= editorBounds.viewportHeight + 1 && editorBounds.right <= editorBounds.viewportWidth, JSON.stringify(editorBounds))
+ await page.keyboard.press('Escape')
+ await editor.waitFor({ state: 'hidden' })
+ await page.getByRole('button', { name: 'Create Coping Mechanism', exact: true }).click()
+ await page.setViewportSize({ width: 1280, height: 900 })
  await page.getByLabel('Name', { exact: true }).fill('Walking')
  await page.getByLabel('Stable key', { exact: true }).fill('walking')
  await page.getByLabel('Description', { exact: true }).fill('A gentle walk')

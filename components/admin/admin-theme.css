@@ -5,6 +5,8 @@
  background:var(--background); color:var(--foreground);
 }
 .cozy-admin .recharts-cartesian-axis-tick-value { fill:var(--muted-foreground); font-size:11px; }
+.cozy-admin[data-slot="dialog-content"],
+.cozy-admin[data-slot="sheet-content"] { background:var(--card); color:var(--card-foreground); }
 .cozy-admin .recharts-cartesian-grid line { stroke:var(--border); }
 .dark .cozy-admin[data-slot="sheet-content"] { background:var(--card); }
 .cozy-admin .recharts-responsive-container { overflow:clip; }
@@ -33,8 +35,6 @@
 }
 
 /* Admin layouts use typography and data hierarchy rather than decorative badges. */
-.cozy-admin { --background:#fff; --card:#fff; }
-.dark .cozy-admin { --background:#000; --card:#000; }
 .cozy-admin .admin-icon-small { width:18px; height:18px; border:0; border-radius:0; background:transparent; color:inherit; }
 .cozy-admin .admin-nav-link { border-radius:7px; min-height:42px; }
 .cozy-admin .admin-panel { box-shadow:none; }
@@ -55,3 +55,14 @@
 @media(max-width:640px) { .cozy-admin .admin-chart-panel { padding:16px; } .cozy-admin .admin-stat { padding:18px; } }
 .cozy-admin.admin-review-dialog { left:auto; right:0; top:0; transform:none; height:100dvh; max-height:100dvh; width:min(40rem,100vw); max-width:none; border-radius:0; display:flex; flex-direction:column; overflow-y:auto; padding:32px; }
 .cozy-admin.admin-review-dialog { translate:none; animation:none; }
+
+/* Shared content rhythm keeps lists, charts and editors consistent. */
+.cozy-admin main > * { min-width:0; }
+.cozy-admin table th { font-size:12px; font-weight:600; color:var(--muted-foreground); }
+.cozy-admin table td { vertical-align:top; line-height:1.6; }
+.cozy-admin table button { white-space:nowrap; }
+.cozy-admin [data-slot="dialog-content"] form { min-width:0; }
+.cozy-admin label { line-height:1.5; }
+@media(max-width:640px) {
+ .cozy-admin.admin-review-dialog { padding:24px 16px; }
+}
