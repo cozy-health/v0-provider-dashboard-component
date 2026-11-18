@@ -304,6 +304,9 @@ try {
     assert.equal((await downloaded).suggestedFilename(), 'provider-report-1.pdf')
     await page.getByRole('tab', { name: 'Provider notes' }).click()
     await page.getByLabel('New provider note').waitFor()
+    // Opening the tab starts its own list request. Finish that pre-revocation
+    // load before measuring requests initiated by the sharing refresh.
+    await page.getByText('No provider notes yet.', { exact: true }).waitFor()
     consent = { moods: false, journals: false, quizzes: false, notes: false }
     const callsBefore = calls.length
     await page.getByRole('button', { name: 'Refresh sharing' }).click()
