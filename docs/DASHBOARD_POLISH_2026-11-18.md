@@ -47,6 +47,8 @@ Source inventory identifies nine DialogContent callers, two navigation sheets, o
 
 Five focused state regressions cover same-path refresh, empty results, changed patient/filter paths, failed retry and revoked-data visibility. Existing isolated admin/provider browser contracts are added to hosted release checks. The management contract verifies popup viewport fit and the 44-pixel close control. Existing tests retain role, CSRF, consent, expiry, errors, keyboard and responsive checks.
 
+The first hosted provider browser run reproduced a refresh regression where retaining the parent patient view left nested journal/assessment lists unchanged after manual sharing refresh. Content retention is now explicitly enabled only for the roster and overview. Other manual reloads retain their existing remount behavior, and background revalidation preserves draft state. The existing shared-summary and revocation browser assertions remain unchanged. First admin/management browser assertions passed, but artifact upload failed because its path contained a parent-directory segment. CI now collects synthetic captures into a supported workspace path.
+
 Next.js and eslint-config-next are patched from 16.4.3 to 16.4.6 with owner authorization after verified advisories. No API contracts or database schemas change. No provider is marked professionally verified for testing.
 
 Graphify status was STALE and refresh refused the production branch with `development-only policy requires develop`. Source/caller review and normal validation provide the fallback. No fresh-graph success is claimed.

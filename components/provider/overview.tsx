@@ -8,7 +8,7 @@ type Overview = { data: { checked_at: string; totals: { connected_patients: numb
 type Destination = "Patients" | "Messages" | "Shared assessment results"
 
 export function ProviderOverview({ navigate, openPatient }: { navigate: (destination: Destination) => void; openPatient: (id: number) => void }) {
-  const { data, error, loading, refreshing, reload } = useData<Overview>("overview")
+  const { data, error, loading, refreshing, reload } = useData<Overview>("overview", { retainOnReload: true })
   if (loading) return <Loading />
   if (error) return <Failure error={error} retry={reload} />
   if (!data) return <Failure error="Overview is unavailable." retry={reload} />

@@ -27,7 +27,7 @@ function priorityVariant(value: PatientState): "default" | "secondary" | "outlin
 }
 
 export function PatientRoster({ select, email, allowConnection = false, title = "Follow-up priority" }: { select: (id: number) => void; email?: string; allowConnection?: boolean; title?: string }) {
-  const { data, error, loading, refreshing, reload } = useData<Client[]>("clients")
+  const { data, error, loading, refreshing, reload } = useData<Client[]>("clients", { retainOnReload: true })
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<Filter>("all")
   const [adding, setAdding] = useState(false)
