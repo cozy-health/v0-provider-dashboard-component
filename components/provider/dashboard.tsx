@@ -1,21 +1,16 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import Image from "next/image"
-import { LayoutDashboard, MessageCircle, Users, BookOpen, FileText, Settings, Shield, LogOut, Menu, UserRoundPlus } from "lucide-react"
+import { useEffect, useState } from "react"
+import { LayoutDashboard, MessageCircle, Users, BookOpen, FileText, Settings, Shield, LogOut } from "lucide-react"
 import { toast } from "sonner"
-import { api, Client, Provider, freshNavigation } from "@/lib/provider-api"
+import { api, Provider, freshNavigation } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card, Empty, Failure, Loading, useData, date } from "./data-list"
+import { Failure, Loading, useData } from "./data-list"
 import { PatientView } from "./patient-view"
 import { ResourceLibrary, Reports, AuditLog, ProviderSettings } from "./portal-pages"
 import { ConsentNotice } from "./consent-notice"
-import { PatientConnection } from "./patient-connection"
 import { ThemeButton } from "@/components/theme-button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet"
-import { useDesktopNavigation } from "@/hooks/use-desktop-navigation"
+import { WorkspaceShell } from "@/components/workspace/workspace-shell"
 import { QuizInbox } from "./quiz-inbox"
 
 import { ProviderOverview } from "./overview"
@@ -35,9 +30,6 @@ const viewDescriptions: Record<string, string> = {
   Settings: "Manage your profile, timezone and sign-in protection.",
 }
 export function ProviderDashboard({ expires }: { expires: number }) {
-  const [open, setOpen] = useState(false)
-  const closeNavigation = useCallback(() => setOpen(false), [])
-  useDesktopNavigation(closeNavigation)
   const profile = useData<{ data: { provider: Provider } }>("me")
   const [view, setView] = useState<string>("Overview")
   const [patient, setPatient] = useState<number | null>(null)
@@ -52,23 +44,9 @@ export function ProviderDashboard({ expires }: { expires: number }) {
     catch (error) { toast.error((error as Error).message); setSigningOut(false) }
   }
   const provider = profile.data?.data.provider
-  const nav = <nav aria-label="Main navigation" className="flex flex-col gap-1 p-3">{navigation.map(({ name, icon: Icon }) => <Button key={name} variant="ghost" aria-current={view === name ? "page" : undefined} onClick={() => { setView(name); setPatient(null); closeNavigation() }} className={`h-auto min-h-11 justify-start whitespace-normal text-left ${view === name ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}`}><Icon className="size-4 shrink-0" />{name}</Button>)}</nav>
-  const account = <div className="mt-auto border-t border-sidebar-border p-4"><p className="break-words text-sm font-medium">{provider?.name || "Provider account"}</p><p className="mb-3 break-words text-xs text-muted-foreground">{provider?.practice}</p><Button className="min-h-11" variant="ghost" onClick={logout} disabled={signingOut}><LogOut className="size-4" />{signingOut ? "Signing out..." : "Sign out"}</Button></div>
-  const brand = <><Image src="/images/cozy-logo.png" alt="Cozy" width={40} height={40} className="shrink-0 rounded-lg" /><div className="min-w-0 flex-1 break-words"><p className="text-base font-semibold sm:text-lg">Cozy Health</p><p className="text-xs text-muted-foreground">Provider Dashboard</p></div></>
-  return <div className="cozy-provider min-h-screen bg-background lg:flex">
-    <Sheet open={open} onOpenChange={setOpen}>
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-card px-4 py-3 lg:hidden"><SheetTrigger asChild><Button variant="outline" size="icon" className="size-11 shrink-0" aria-label="Open navigation"><Menu /></Button></SheetTrigger><div className="flex min-w-0 flex-1 items-center gap-2">{brand}</div><ThemeButton /></header>
-      <SheetContent side="left" className="flex h-dvh w-[min(20rem,calc(100%-2rem))] flex-col gap-0 bg-sidebar text-sidebar-foreground">
-        <SheetHeader className="border-b pr-16"><SheetTitle>Cozy Health</SheetTitle><SheetDescription>Provider navigation</SheetDescription></SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>{account}
-      </SheetContent>
-    </Sheet>
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
-      <div className="flex items-center gap-3 border-b border-sidebar-border p-4">{brand}<ThemeButton /></div>
-      <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>{account}
-    </aside>
-    <main className="min-w-0 flex-1 p-4 pb-12 sm:p-6 lg:p-8"><div className="mx-auto w-full max-w-7xl">
-      <header className="dashboard-page-heading mb-8"><p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">Cozy Health · Provider portal</p><h1 className="break-words text-2xl font-semibold tracking-tight sm:text-3xl">{view === "Patient messages" ? "Messages" : patient ? "Patient overview" : view}</h1><p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{patient && view === "Patients" ? "Review this patient's shared records and current sharing choices." : viewDescriptions[view]}</p></header>
+  const nav = <nav aria-label="Main navigation"><div><p className="workspace-nav-label">Care workspace</p><div className="space-y-1">{navigation.map(({ name, icon: Icon }) => <Button key={name} variant="ghost" aria-current={view === name ? "page" : undefined} onClick={() => { setView(name); setPatient(null) }}><Icon className="size-4 shrink-0" /><span>{name}</span></Button>)}</div></div></nav>
+  return <div className="cozy-provider"><WorkspaceShell audience="Provider portal" context={patient ? "Patient workspace" : view} name={provider?.name || "Provider account"} navigation={nav} appearance={<ThemeButton />} accountAction={<Button variant="ghost" onClick={logout} disabled={signingOut} aria-label={signingOut ? "Signing out..." : "Sign out"} title="Sign out"><LogOut className="size-4" /></Button>}>
+      <header className="dashboard-page-heading mb-7"><p className="mb-3 text-[11px] font-semibold uppercase tracking-[.15em] text-primary">Your care workspace</p><h1>{view === "Patient messages" ? "Messages" : patient ? "Patient overview" : view}</h1><p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">{patient && view === "Patients" ? "Review this patient's shared records and current sharing choices." : viewDescriptions[view]}</p></header>
       {profile.loading ? <Loading /> : profile.error ? <Failure error={profile.error} retry={profile.reload} /> : provider && <ConsentNotice key={provider.id} ownerId={provider.id}>
         {view === "Overview" && <ProviderOverview navigate={destination => { setPatient(null); setView(destination) }} openPatient={id => { setPatient(id); setView("Patients") }} />}
         {view === "Patients" && (patient ? <><Button className="mb-4" onClick={() => setView("Patient messages")}>Message patient</Button><PatientView key={patient} id={patient} back={() => setPatient(null)} /></> : <PatientRoster select={setPatient} email={provider.email} allowConnection title="Patient directory" />)}
@@ -80,18 +58,5 @@ export function ProviderDashboard({ expires }: { expires: number }) {
         {view === "Audit log" && <AuditLog />}
         {view === "Settings" && <ProviderSettings provider={provider} saved={profile.reload} />}
       </ConsentNotice>}
-    </div></main>
-  </div>
-}
-
-function Roster({ select, email }: { select: (id: number) => void; email: string }) {
-  const { data, error, loading, reload } = useData<Client[]>("clients")
-  const [search, setSearch] = useState(""), [adding, setAdding] = useState(false)
-  useEffect(() => { const refresh = () => reload(); window.addEventListener("focus", refresh); return () => window.removeEventListener("focus", refresh) }, [reload])
-  if (loading) return <Loading />
-  if (error) return <Failure error={error} retry={reload} />
-  const filtered = (data || []).filter(client => client.name.toLowerCase().includes(search.toLowerCase()) || String(client.user_id).includes(search))
-  return <div className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">Only patients who invite you and whose invitations you accept appear here.</p><Button onClick={() => setAdding(true)}><UserRoundPlus aria-hidden="true" className="size-4" />Accept patient invitation</Button></div>{adding && <PatientConnection email={email} close={() => setAdding(false)} connected={() => { toast.success("Patient connected."); reload() }} />}<div className="flex flex-col gap-3 sm:flex-row"><Input aria-label="Search patients" placeholder="Search by first name or patient ID" value={search} onChange={event => setSearch(event.target.value)} /><Button variant="outline" onClick={reload}>Refresh</Button></div>
-    {!data?.length ? <Empty>No linked patients yet. You can use your workspace without patients. Ask a patient to send an invitation to your registered email from My Provider in the Cozy app, then choose Accept patient invitation.</Empty> : !filtered.length ? <Empty>No patients match your search.</Empty> : filtered.map(client => <Card key={client.user_id}><div className="flex flex-wrap gap-4 items-center justify-between"><div><h2 className="break-words font-semibold text-lg">{client.name} <span className="font-normal text-sm text-muted-foreground">· Patient #{client.user_id}</span></h2><p className="text-xs text-muted-foreground mt-1">Linked {date(client.linked_at)}</p><div className="flex flex-wrap gap-2 mt-3">{Object.entries(client.consent_flags).map(([type, shared]) => <Badge key={type} variant={shared ? "secondary" : "outline"}>{type}: {shared ? "shared" : "private"}</Badge>)}</div></div><Button onClick={() => select(client.user_id)}>View patient</Button></div></Card>)}
-  </div>
+  </WorkspaceShell></div>
 }

@@ -1,6 +1,30 @@
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 
+// In-page provider workspaces deliberately reset on document reload. Inspect their
+// responsive states without discarding the selected screen or its unsaved form.
+export async function reviewPanel(page, name) {
+  const directory = 'scratch/theme-review'
+  await mkdir(directory, { recursive: true })
+  const original = page.viewportSize()
+  const originalDark = await page.locator('html').evaluate(el => el.classList.contains('dark'))
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const dark of [false, true]) {
+      if (await page.locator('html').evaluate(el => el.classList.contains('dark')) !== dark) {
+        await page.getByRole('button', { name: dark ? 'Switch to dark mode' : 'Switch to light mode', exact: true }).filter({ visible: true }).click()
+      }
+      await page.waitForFunction(value => document.documentElement.classList.contains('dark') === value, dark)
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name}: overflow at ${width}`)
+      await page.screenshot({ path: `${directory}/${name}-${width}-${dark ? 'dark' : 'light'}.png`, fullPage: true, animations: 'disabled' })
+    }
+  }
+  await page.setViewportSize(original)
+  if (await page.locator('html').evaluate(el => el.classList.contains('dark')) !== originalDark) {
+    await page.getByRole('button', { name: originalDark ? 'Switch to dark mode' : 'Switch to light mode', exact: true }).filter({ visible: true }).click()
+  }
+}
+
 export async function reviewThemes(page, name) {
   await page.getByRole('button', { name: /Switch to (light|dark) mode/ }).filter({ visible: true }).waitFor()
   // Hide Next's development status badge only; it is absent from production.

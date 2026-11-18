@@ -32,6 +32,8 @@ const backend = createServer(async (request, response) => {
   } })
  }
  if (path === 'metrics/usage') return send(200, { meta, data: { features: [{ feature: 'mood_entries', ...cell }, { feature: 'quiz_attempts', ...cell }] } })
+ if (path === 'metrics/safety') return send(200, { meta, data: [{ range: '7d', status: 'suppressed', count: '<5' }, { range: '30d', status: 'unavailable', count: null }, { range: '90d', status: 'available', count: 0 }] })
+ if (path === 'community-moderation') return send(200, { data: { data: [], current_page: 1, last_page: 1 }, appeals: { data: [], current_page: 1, last_page: 1 } })
  if (path === 'metrics/retention') return send(200, { meta, data: [] })
  if (path.startsWith('content/coping') && request.method !== 'GET') {
   if (request.method === 'POST') { coping.push({ id: 1, ...body }); return send(201, { data: coping[0] }) }
@@ -77,7 +79,7 @@ try {
  await page.getByLabel('Password', { exact: true }).fill('fixture-only')
  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
  await page.getByRole('heading', { name: 'User registrations' }).waitFor()
- await page.getByText('Hi, Test Operator', { exact: true }).waitFor()
+ await page.locator('.workspace-account').filter({ visible: true }).getByText('Test Operator', { exact: true }).waitFor()
  assert.ok(await page.locator('.recharts-wrapper').count() >= 2)
  const navigation = page.getByRole('navigation', { name: 'Admin navigation' })
  for (const group of ['Overview', 'People & Wellness', 'Community', 'Operations']) {
@@ -239,6 +241,24 @@ try {
  await page.evaluate(() => localStorage.removeItem('theme')); await page.reload()
  await page.emulateMedia({ colorScheme: 'dark' })
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
+ await page.setViewportSize({ width: 1440, height: 1000 })
+ await page.goto(`${origin}/admin/safety`)
+ await page.getByRole('heading', { name: 'Crisis-flagged record counts' }).waitFor()
+ await reviewThemes(page, 'admin-safety')
+ await page.goto(`${origin}/admin/manage/community-moderation`)
+ await page.getByRole('heading', { name: 'Decisions', exact: true }).waitFor()
+ await page.getByRole('heading', { name: 'No pending appeals', exact: true }).waitFor()
+ await reviewThemes(page, 'admin-restrictions')
+ await page.goto(`${origin}/admin/manage/articles`)
+ await page.getByRole('heading', { name: 'Article library', exact: true }).waitFor()
+ await reviewThemes(page, 'admin-articles')
+ await page.goto(`${origin}/admin/manage/users`)
+ await page.getByRole('cell', { name: 'person@example.test', exact: true }).waitFor()
+ await reviewThemes(page, 'admin-users')
+ await page.getByRole('button', { name: 'View', exact: true }).click()
+ await page.getByRole('dialog').waitFor()
+ await page.getByText('Account status', { exact: true }).last().waitFor()
+ await page.keyboard.press('Escape')
  assert.deepEqual(errors, [])
  console.log('PASS new admin flows: charts, filters, branded themes and persistence, catalog CRUD, quiz draft/preview/publish, permission errors, mobile drawer, system preference, and no runtime errors.')
 } catch (error) { exitCode = 1; console.error(error) } finally {

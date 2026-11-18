@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { ArrowUpRight, HeartHandshake, MessageCircle, Users, ClipboardList, ShieldCheck } from "lucide-react"
 import { Card, Failure, Loading, date, useData } from "./data-list"
 import { PatientRoster } from "./patient-roster"
 
@@ -12,18 +13,18 @@ export function ProviderOverview({ navigate, openPatient }: { navigate: (destina
   if (loading) return <Loading />
   if (error) return <Failure error={error} retry={reload} />
   if (!data) return <Failure error="Overview is unavailable." retry={reload} />
-  const metrics: { label: string; value: number; destination: Destination }[] = [
-    { label: "Connected patients", value: data.data.totals.connected_patients, destination: "Patients" },
-    { label: "Unread patient messages", value: data.data.totals.unread_messages, destination: "Messages" },
-    { label: "Shared assessment results", value: data.data.totals.shared_assessments, destination: "Shared assessment results" },
+  const metrics = [
+    { label: "Connected patients", value: data.data.totals.connected_patients, destination: "Patients" as Destination, icon: Users },
+    { label: "Unread patient messages", value: data.data.totals.unread_messages, destination: "Messages" as Destination, icon: MessageCircle },
+    { label: "Shared assessment results", value: data.data.totals.shared_assessments, destination: "Shared assessment results" as Destination, icon: ClipboardList },
   ]
   return <div className="space-y-6" aria-busy={refreshing}>
-    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">Current totals across all accessible records. Checked {date(data.data.checked_at)}.</p><Button variant="outline" disabled={refreshing} onClick={reload}>{refreshing ? "Refreshing overview…" : "Refresh overview"}</Button></div>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{metrics.map(metric => <Card key={metric.label}>
-      <h2 className="text-sm text-muted-foreground">{metric.label}</h2><p className="my-3 text-3xl font-semibold tabular-nums">{metric.value}</p>
-      <Button variant="outline" onClick={() => navigate(metric.destination)}>View {metric.destination.toLowerCase()}</Button>
-    </Card>)}</div>
-    {metrics.every(metric => metric.value === 0) && <p className="text-sm text-muted-foreground">No connected patients, unread messages or shared results yet. Accept a patient invitation from Patients to get started.</p>}
-    <PatientRoster select={openPatient} />
+    <section className="workspace-hero"><div><HeartHandshake className="mb-4" size={30} aria-hidden="true" /><h2>A clearer view of your patients</h2><p>{metrics.every(metric => metric.value === 0) ? "Your workspace is ready. Accept a patient invitation to start reviewing the information they choose to share." : "See what needs your attention, continue conversations and review shared information from one workspace."}</p></div><Button onClick={() => navigate("Patients")}>Open patient directory<ArrowUpRight size={16} aria-hidden="true" /></Button></section>
+    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">Current totals · Checked {date(data.data.checked_at)}</p><Button variant="ghost" disabled={refreshing} onClick={reload}>{refreshing ? "Refreshing overview…" : "Refresh overview"}</Button></div>
+    <div className="workspace-stats">{metrics.map(metric => <section className="workspace-panel workspace-stat" key={metric.label}>
+      <div className="workspace-stat-top"><h2 className="workspace-stat-label">{metric.label}</h2><span className="workspace-stat-icon"><metric.icon size={19} aria-hidden="true" /></span></div><p className="workspace-stat-value">{metric.value}</p>
+      <button className="workspace-stat-link" onClick={() => navigate(metric.destination)}>View {metric.destination.toLowerCase()}<ArrowUpRight size={14} aria-hidden="true" /></button>
+    </section>)}</div>
+    <div className="workspace-editor-grid"><section className="workspace-panel p-5 sm:p-6"><PatientRoster select={openPatient} /></section><aside className="workspace-panel workspace-context-card"><ShieldCheck className="mb-4 text-primary" size={24} aria-hidden="true" /><h2>Sharing stays with the patient</h2><p>Patients decide which records to share. Their choices can change at any time, and every request checks current access.</p><div className="mt-5 border-t pt-4"><p className="!mt-0">A follow-up priority is a conversation aid. It is not a diagnosis or a clinical assessment.</p></div></aside></div>
   </div>
 }

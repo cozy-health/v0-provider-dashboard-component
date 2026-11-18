@@ -6,6 +6,8 @@ import { VoiceMessage } from "./voice-message"
 import { VoiceRecorder } from "./voice-recorder"
 import { api } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { MessageCircle, Search } from "lucide-react"
 import { Loading } from "./data-list"
 import { SharedRecordCard, type SharedRecord } from "./shared-record-card"
 
@@ -17,6 +19,10 @@ export function Messages({ userId }: { userId?: number }) {
   const [draft, setDraft] = useState(""), [sending, setSending] = useState(false), [error, setError] = useState("")
   const [voiceBusy, setVoiceBusy] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [messageOwner, setMessageOwner] = useState<number | null>(null)
+  const [messageRevision, setMessageRevision] = useState(0)
+  const visibleMessages = messageOwner === selected ? messages : []
+  const [threadSearch, setThreadSearch] = useState("")
   const oldest = useRef<number | null>(null)
   const feed = useRef<HTMLDivElement>(null)
   const lastMessageId = messages.at(-1)?.id
@@ -42,16 +48,16 @@ export function Messages({ userId }: { userId?: number }) {
       try {
         const page = await api<{ data: Message[]; has_more: boolean }>(`conversations/${selected}/messages${oldest.current ? `?since=${oldest.current}` : ""}`)
         if (!active) return
-        setMessages(page.data); oldest.current = page.data[0]?.id ?? null
+        setMessages(page.data); setMessageOwner(selected); oldest.current = page.data[0]?.id ?? null
         setMore(page.has_more)
         if (page.data.length) await api(`conversations/${selected}/read`, { method: "POST", body: JSON.stringify({ through: page.data.at(-1)!.id }) })
-      } catch (e) { if (active) { setMessages([]); setError((e as Error).message) } }
+      } catch (e) { if (active) { setMessages([]); setMessageOwner(selected); setError((e as Error).message) } }
       finally { busy = false }
     }
     const initial = setTimeout(() => { setMessages([]); setDraft(""); setMore(false); void load() }, 0)
     const timer = setInterval(() => void load(), 5000)
     return () => { active = false; clearTimeout(initial); clearInterval(timer) }
-  }, [selected])
+  }, [selected, messageRevision])
   async function older() {
     const first = messages[0]
     if (!selected || !first) return
@@ -73,15 +79,17 @@ export function Messages({ userId }: { userId?: number }) {
     finally { setSending(false) }
   }
   if (loading) return <Loading />
-  return <div className="grid items-start gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
-    <aside aria-label="Conversations" className="min-w-0 space-y-2 rounded-2xl border bg-card p-4"><h2 className="mb-3 text-sm font-semibold">Conversations</h2>{threads.length ? threads.map(t => <Button disabled={sending || voiceBusy} key={t.id} variant={selected === t.id ? "secondary" : "outline"} aria-pressed={selected === t.id} className="h-auto w-full justify-between whitespace-normal text-left" onClick={() => { setSelected(t.id); setError("") }}><span className="min-w-0 break-words">{t.name}</span>{t.unread > 0 && <span className="rounded-full bg-primary px-2 text-primary-foreground">{t.unread}</span>}</Button>) : <p className="text-sm leading-relaxed text-muted-foreground">No connected patients yet. Accept a patient invitation from Patients to start a conversation.</p>}</aside>
-    <section aria-label="Conversation" className="min-w-0 rounded-2xl border bg-card p-4">
-      <h2 className="mb-4 font-semibold">{threads.find(t => t.id === selected)?.name ?? "Messages"}</h2>
-      {error && <div role="alert" className="mb-3 text-destructive">{error} <Button variant="outline" onClick={refresh}>Retry</Button></div>}
-      <div ref={feed} className="flex h-[50vh] flex-col gap-3 overflow-y-auto" aria-live="polite">
-        {selected && more && messages.length > 0 && <Button variant="ghost" onClick={older}>Load earlier messages</Button>}
-        {selected && !messages.length && <p className="text-sm text-muted-foreground">Start a conversation with your patient.</p>}
-        {(selected ? messages : []).map(m => <article key={m.id} className={`rounded-2xl ${m.records.length ? "w-full max-w-[94%] sm:max-w-lg " + (m.sender === "provider" ? "self-end" : "self-start") : "max-w-[90%] p-3 sm:max-w-[75%] " + (m.sender === "provider" ? "self-end bg-primary text-primary-foreground" : "self-start bg-muted")}`}>
+  return <div className="workspace-panel workspace-messenger">
+    <aside aria-label="Conversations" className="workspace-thread-list"><div className="mb-5 flex items-center justify-between"><h2 className="text-base font-semibold">Conversations</h2><span className="rounded-lg bg-background px-2 py-1 text-xs text-muted-foreground">{threads.length}</span></div><div className="relative mb-4"><Search className="pointer-events-none absolute left-3 top-3.5 text-muted-foreground" size={16} aria-hidden="true" /><Input aria-label="Search conversations" placeholder="Find a conversation" className="pl-9" value={threadSearch} onChange={event => setThreadSearch(event.target.value)} /></div><div className="space-y-2">{threads.length ? threads.filter(t => t.name.toLocaleLowerCase().includes(threadSearch.toLocaleLowerCase())).map(t => <Button disabled={sending || voiceBusy} key={t.id} variant="ghost" aria-pressed={selected === t.id} className="workspace-thread-item" onClick={() => { setSelected(t.id); setError("") }}><span className="workspace-avatar" aria-hidden="true">{t.name.slice(0, 1).toUpperCase()}</span><span className="min-w-0 flex-1 break-words">{t.name}</span>{t.unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{t.unread}</span>}</Button>) : <p className="px-2 text-xs leading-relaxed text-muted-foreground">No connected patients yet. Accept a patient invitation from Patients to start a conversation.</p>}{threads.length > 0 && !threads.some(t => t.name.toLocaleLowerCase().includes(threadSearch.toLocaleLowerCase())) && <p className="p-3 text-sm text-muted-foreground">No conversations match your search.</p>}</div></aside>
+    <section aria-label="Conversation" className="workspace-conversation">
+      <header className="workspace-conversation-heading"><span className="workspace-stat-icon"><MessageCircle size={18} aria-hidden="true" /></span><div><h2 className="font-semibold">{threads.find(t => t.id === selected)?.name ?? "Patient messages"}</h2><p className="mt-1 text-xs text-muted-foreground">Conversations and shared records, together</p></div></header>
+      {error && <div role="alert" className="workspace-reading-note my-4">{error} <Button variant="outline" onClick={() => { setError(""); setMessageOwner(null); setMessageRevision(n => n + 1); void refresh() }}>Retry</Button></div>}
+      <div ref={feed} className="workspace-message-feed" aria-live="polite">
+        {selected && messageOwner !== selected && <Loading />}
+        {selected && more && visibleMessages.length > 0 && <Button variant="ghost" onClick={older}>Load earlier messages</Button>}
+        {selected && messageOwner === selected && !visibleMessages.length && !error && <div className="workspace-empty"><span className="workspace-empty-symbol"><MessageCircle size={26} aria-hidden="true" /></span><h3>Start a conversation</h3><p>Send your patient a message using the composer below.</p></div>}
+        {!selected && <div className="workspace-empty h-full"><span className="workspace-empty-symbol"><MessageCircle size={28} aria-hidden="true" /></span><h3>A space for conversation</h3><p>Once a patient is connected, choose their conversation here to send a message and review the records they share.</p></div>}
+        {(selected ? visibleMessages : []).map(m => <article key={m.id} className={`rounded-2xl ${m.records.length ? "w-full max-w-[94%] sm:max-w-lg " + (m.sender === "provider" ? "self-end" : "self-start") : "max-w-[90%] p-3 sm:max-w-[75%] " + (m.sender === "provider" ? "self-end bg-primary text-primary-foreground" : "self-start bg-muted")}`}>
           {m.records.map(r => r.type === "journal_shares" && selected !== null ? <SharedJournalReview key={`${selected}-${r.id}`} conversationId={selected} shareId={r.id} /> : <SharedRecordCard key={`${r.type}-${r.id}`} record={r} />)}
           {m.audio && <VoiceMessage id={m.audio.id} duration={m.audio.duration} />}
           <p className="whitespace-pre-wrap break-words">{m.content}</p>{m.records.length === 0 && <time className="mt-1 block text-right text-xs opacity-75">{new Date(m.created_at).toLocaleString()}</time>}

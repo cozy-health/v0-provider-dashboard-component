@@ -21,20 +21,21 @@ export function ArticleEditor() {
   const [page, setPage] = useState(1), [lastPage, setLastPage] = useState(1)
   const [search, setSearch] = useState(""), [query, setQuery] = useState("")
   const [revision, setRevision] = useState(0)
-  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false)
+  const [loadedKey, setLoadedKey] = useState(""), [busy, setBusy] = useState(false)
+  const requestKey = `${page}:${query}:${revision}`
+  const loading = loadedKey !== requestKey
   const [error, setError] = useState(""), [notice, setNotice] = useState("")
   const [preview, setPreview] = useState(false), [approved, setApproved] = useState(false)
   const dirty = JSON.stringify(draft) !== JSON.stringify(current?.draft ?? blank)
 
   useEffect(() => {
     const controller = new AbortController()
-    setLoading(true)
     adminApi<{ data: ArticlePage }>(`articles?page=${page}&per_page=10${query ? `&search=${encodeURIComponent(query)}` : ""}`, { signal: controller.signal })
       .then(result => { if (!controller.signal.aborted) { setRecords(result.data.data); setLastPage(result.data.last_page); setError("") } })
       .catch((cause: unknown) => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Articles could not be loaded.") })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+      .finally(() => { if (!controller.signal.aborted) setLoadedKey(requestKey) })
     return () => controller.abort()
-  }, [page, query, revision])
+  }, [page, query, revision, requestKey])
 
   useEffect(() => {
     if (!dirty) return
@@ -80,16 +81,16 @@ export function ArticleEditor() {
       <div><p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Cozy Library</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">Published articles</h1><p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">Write a draft, preview the reading experience, then approve publication. Draft edits stay separate from the article people can currently read.</p></div>
       <Button disabled={busy} variant="outline" onClick={() => select(null)}><Plus className="size-4" /> New article</Button>
     </header>
-    <div className="grid items-start gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="space-y-4 rounded-xl border bg-card p-5">
+    <div className="workspace-article-editor">
+      <aside className="workspace-panel workspace-article-list space-y-5"><div><h2 className="text-base font-semibold">Article library</h2><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Find a saved article or start a new draft.</p></div>
         <form className="flex gap-2" onSubmit={event => { event.preventDefault(); setPage(1); setQuery(search.trim()) }}><input aria-label="Search articles" className={inputClass} maxLength={100} placeholder="Search articles" value={search} onChange={event => setSearch(event.target.value)} /><Button type="submit" variant="outline">Search</Button></form>
-        {loading ? <ContentSkeleton label="Loading articles…" /> : records.length === 0 ? <p className="text-sm text-muted-foreground">No articles match this selection.</p> : <ul className="space-y-2">{records.map(article => <li key={article.id}><button type="button" disabled={busy} aria-current={current?.id === article.id ? "true" : undefined} className={`w-full rounded-lg border p-3 text-left ${current?.id === article.id ? "border-primary bg-primary/5" : "hover:bg-muted"}`} onClick={() => select(article)}><span className="block font-medium">{article.draft.title}</span><span className="mt-1 block text-xs text-muted-foreground">{article.published ? "Published" : "Unpublished"}{article.has_draft ? " · draft changes" : ""}</span></button></li>)}</ul>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}{loading ? <ContentSkeleton label="Loading articles…" /> : records.length === 0 ? <p className="text-sm text-muted-foreground">No articles match this selection.</p> : <ul className="space-y-2">{records.map(article => <li key={article.id}><button type="button" disabled={busy} aria-current={current?.id === article.id ? "true" : undefined} className={`w-full rounded-lg border p-3 text-left ${current?.id === article.id ? "border-primary bg-primary/5" : "hover:bg-muted"}`} onClick={() => select(article)}><span className="mb-2 block text-[10px] uppercase tracking-wider text-muted-foreground">{article.draft.category} · {article.draft.read_time_minutes} min read</span><span className="block break-words text-sm font-semibold leading-relaxed">{article.draft.title}</span><span className="mt-1 block text-xs text-muted-foreground">{article.published ? "Published" : "Unpublished"}{article.has_draft ? " · draft changes" : ""}</span></button></li>)}</ul>}
         <div className="flex items-center justify-between gap-2"><Button aria-label="Previous article page" size="icon" variant="outline" disabled={loading || page <= 1} onClick={() => setPage(value => value - 1)}><ChevronLeft className="size-4" /></Button><span className="text-xs">Page {page} of {lastPage}</span><Button aria-label="Next article page" size="icon" variant="outline" disabled={loading || page >= lastPage} onClick={() => setPage(value => value + 1)}><ChevronRight className="size-4" /></Button></div>
         <Button variant="ghost" disabled={loading || busy} onClick={() => setRevision(value => value + 1)}><RefreshCw className="size-4" /> Refresh list</Button>
       </aside>
-      <form className="space-y-5 rounded-xl border bg-card p-5 sm:p-7" onSubmit={event => { event.preventDefault(); void action("save") }}>
+      <form className="workspace-panel space-y-6 p-5 sm:p-7" onSubmit={event => { event.preventDefault(); void action("save") }}>
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-lg font-semibold"><BookOpen className="size-5" /> {current ? "Edit article draft" : "New article draft"}</h2><span className="text-xs text-muted-foreground">{dirty ? "Unsaved changes" : current ? "Saved" : "Not saved"}</span></div>
-        <fieldset disabled={busy} className="space-y-4">
+        <fieldset disabled={busy} className="space-y-5"><legend className="mb-5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Article content and publication details</legend>
           <label className="block space-y-2 text-sm font-medium">Title<input required maxLength={255} className={inputClass} value={draft.title} onChange={event => change("title", event.target.value)} /></label>
           <div className="grid gap-4 sm:grid-cols-2"><label className="block space-y-2 text-sm font-medium">Stable article key<input required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={100} className={inputClass} value={draft.slug} onChange={event => change("slug", event.target.value)} /><span className="block text-xs font-normal text-muted-foreground">Use lowercase words separated by hyphens. Published keys cannot change.</span></label><label className="block space-y-2 text-sm font-medium">Category<select className={inputClass} value={draft.category} onChange={event => change("category", event.target.value)}>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label></div>
           <label className="block space-y-2 text-sm font-medium">Short introduction<textarea required maxLength={1000} rows={3} className={inputClass} value={draft.excerpt} onChange={event => change("excerpt", event.target.value)} /></label>
@@ -99,7 +100,7 @@ export function ArticleEditor() {
         </fieldset>
         {error && <p role="alert" className="whitespace-pre-wrap text-sm text-destructive">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
         {current && <Button type="button" variant="ghost" disabled={busy} onClick={() => void reloadCurrent()}><RefreshCw className="size-4" /> Reload saved article</Button>}
-        <div className="flex flex-wrap gap-3"><Button type="submit" disabled={busy || !dirty && !!current}><Save className="size-4" /> {busy ? "Saving…" : "Save draft"}</Button><Button type="button" variant="outline" disabled={!draft.title || !draft.body || busy} onClick={() => setPreview(true)}><Eye className="size-4" /> Preview</Button></div>
+        <div className="workspace-form-actions"><Button type="submit" disabled={busy || !dirty && !!current}><Save className="size-4" /> {busy ? "Saving…" : "Save draft"}</Button><Button type="button" variant="outline" disabled={!draft.title || !draft.body || busy} onClick={() => setPreview(true)}><Eye className="size-4" /> Preview</Button></div>
         <div className="space-y-4 border-t pt-5"><label className="flex items-start gap-3 text-sm leading-relaxed"><input type="checkbox" className="mt-1" checked={approved} disabled={busy || dirty || !current} onChange={event => setApproved(event.target.checked)} />I have reviewed this saved draft, confirmed the rights to publish it, and approve it for the app.</label><div className="flex flex-wrap gap-3"><Button type="button" disabled={busy || dirty || !current || !approved} onClick={() => void action("publish")}><Send className="size-4" /> Publish approved draft</Button>{current?.published && <Button type="button" variant="outline" disabled={busy || dirty} onClick={() => { if (window.confirm("Unpublish this article from the app catalogue?")) void action("unpublish") }}>Unpublish</Button>}</div>{dirty && <p className="text-xs text-muted-foreground">Save changes before publishing or unpublishing. A conflict keeps your draft on screen so you can review it before reloading.</p>}</div>
       </form>
     </div>
