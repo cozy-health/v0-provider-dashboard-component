@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { PageAnalytics } from '@/components/page-analytics'
 import './globals.css'
+import '@/components/workspace/workspace.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -37,6 +38,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased">
         <ThemeProvider nonce={nonce} attribute="class" defaultTheme="system" enableSystem>
           <ThemeToggle />
+          {process.env.NODE_ENV === 'development' && process.env.COZY_INTEGRATION_FIXTURE && <div role="note" className="pointer-events-none fixed bottom-3 right-3 z-[100] rounded-full border border-[#49759e] bg-[#102f4d] px-4 py-2 text-[11px] font-medium text-white shadow-lg">Local design review · Sample data only</div>}
           {children}
           <Toaster />
         </ThemeProvider>

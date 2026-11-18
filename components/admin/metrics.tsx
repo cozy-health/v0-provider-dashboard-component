@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react"
 import { adminApi, Cell, Cohort, MetricResponse } from "@/lib/admin-api"
 import { AdminIcon, moduleVisuals } from "./admin-visuals"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, ShieldAlert } from "lucide-react"
+import { WorkspaceSection, WorkspaceNote } from "@/components/workspace/workspace-section"
 import { Button } from "@/components/ui/button"
 import { AnalyticsBars } from "./admin-workspace"
 import { MetricCell, RetentionCell } from "./metric-display"
@@ -38,7 +39,7 @@ function MetricData({ metric, range, retry }: { metric: Metric; range: string; r
     {metric === "safety" && <SafetyView rows={data as Safety} />}
   </div>
 }
-function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border rounded-xl p-5 sm:p-6 bg-card"><h2 className="font-semibold text-lg mb-4">{title}</h2>{children}</section> }
+function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <WorkspaceSection title={title}>{children}</WorkspaceSection> }
 function Empty() { return <p className="border border-dashed rounded-lg p-6 text-sm text-muted-foreground">No reporting buckets are available for this release.</p> }
 function Suppressed({ cells }: { cells: Cell[] }) { return cells.length > 0 && cells.every(cell => cell.status !== "available") ? <p role="status" className="text-sm text-muted-foreground mb-4">This view has no publishable counts yet. Groups are suppressed or observation windows are incomplete.</p> : null }
 function Trend({ rows, label }: { rows: (Cell & { date?: string; week?: string })[]; label: string }) {
@@ -57,5 +58,8 @@ function RetentionView({ rows }: { rows: Cohort[] }) {
   return <Panel title="Signup cohorts · D1 / D7 / D30"><p className="text-sm text-muted-foreground mb-4">Returned on the exact UTC calendar day after signup, measured by stored record creation. Cohort weeks start Monday. Counts and rates are rounded; incomplete windows are labeled.</p><Suppressed cells={rows.flatMap(row => Object.values(row.retention))} />{!rows.length ? <Empty /> : <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr className="border-b">{["Cohort week", "Signups", "D1", "D7", "D30"].map(label => <th key={label} scope="col" className="p-3 font-medium">{label}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={row.week} className="border-b last:border-0"><th scope="row" className="p-3 font-normal whitespace-nowrap">{row.week}</th><td className="p-3"><MetricCell cell={row.signups} /></td>{(["d1", "d7", "d30"] as const).map(day => <td key={day} className="p-3"><RetentionCell cell={row.retention[day]} /></td>)}</tr>)}</tbody></table></div>}</Panel>
 }
 function SafetyView({ rows }: { rows: Safety }) {
-  return <Panel title="Crisis-flagged record counts"><p className="text-sm text-muted-foreground mb-5">Stored flags across moods, published journals and completed assessments. These are aggregate system signals, not clinical assessments or an emergency queue. No content or individual details are available.</p><Suppressed cells={rows} />{!rows.length ? <Empty /> : <div className="grid gap-4 sm:grid-cols-3">{rows.map(row => <div key={row.range} className="border rounded-lg p-5"><p className="text-sm text-muted-foreground">{row.range} before release</p><p className="text-3xl mt-3"><MetricCell cell={row} /></p></div>)}</div>}</Panel>
+  const periods: Record<string, string> = { "7d": "7 days", "30d": "30 days", "90d": "90 days" }
+  return <div className="workspace-safety-grid"><WorkspaceSection title="Crisis-flagged record counts" description="Stored flags across moods, published journals and completed assessments.">
+    <Suppressed cells={rows} />{!rows.length ? <Empty /> : <div className="workspace-safety-periods">{rows.map(row => <article key={row.range} className="workspace-safety-card"><ShieldAlert className="mb-5 text-primary" size={20} aria-hidden="true" /><h3 className="text-sm font-medium">{periods[row.range] || row.range}</h3><p className="mt-1 text-xs text-muted-foreground">Before the published release</p><p className="mt-5 text-3xl font-semibold"><MetricCell cell={row} /></p><p className="mt-3 text-xs text-muted-foreground">{row.status === "suppressed" ? "Small group protected" : row.status === "available" ? "Released aggregate count" : row.status === "immature" ? "Observation window incomplete" : "Count unavailable"}</p></article>)}</div>}
+  </WorkspaceSection><aside className="space-y-5"><WorkspaceNote title="Read these signals with care">These are aggregate system signals, not clinical assessments or an emergency queue. No content or individual details are available.</WorkspaceNote><WorkspaceSection title="Privacy protection"><p className="text-sm leading-relaxed text-muted-foreground">A suppressed value (&lt;5) does not mean zero. Reporting never identifies an individual or replaces the existing crisis-support workflows.</p></WorkspaceSection></aside></div>
 }

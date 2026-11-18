@@ -1,6 +1,6 @@
 // Isolated contract fixtures. Never connects to the deployed API or real patients.
 import assert from 'node:assert/strict'
-import { reviewThemes } from './theme-design-review.mjs'
+import { reviewThemes, reviewPanel } from './theme-design-review.mjs'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
 import { createIsolatedTestApp } from './isolated-next-app.mjs'
@@ -8,6 +8,11 @@ import { pathToFileURL } from 'node:url'
 import { sealSession, SESSION_COOKIE } from '../lib/provider-session.ts'
 
 const calls = []
+let conversationFailure = false
+let releaseConversation = null
+let notifyConversationHeld = null
+let holdConversation = false
+const conversationRows = { 101: [{ id: 1, sender: 'patient', content: 'Synthetic conversation one', records: [], created_at: '2026-11-01T10:00:00Z' }], 102: [{ id: 2, sender: 'patient', content: 'Synthetic conversation two', records: [], created_at: '2026-11-01T11:00:00Z' }] }
 const provider = { id: 1, name: 'Test Provider', email: 'provider@example.test', practice: 'Test Practice', timezone: 'UTC', is_verified: true }
 let consent = { moods: true, journals: true, quizzes: true, notes: true }
 let linked = true
@@ -59,6 +64,15 @@ const backend = createServer(async (request, response) => {
     return send({ owner_id: provider.id, data: documentConsents })
   }
   if (path === 'me') { if (request.method === 'PATCH') Object.assign(provider, JSON.parse(body)); return send({ data: { provider } }) }
+  if (path === 'conversations') return send([{ id: 101, name: 'Sample patient A', user_id: 10, unread: 0 }, { id: 102, name: 'Sample patient B', user_id: 20, unread: 0 }])
+  if (/^conversations\/\d+\/read$/.test(path)) return send({})
+  if (/^conversations\/\d+\/messages$/.test(path)) {
+    const id = Number(path.split('/')[1])
+    if (conversationFailure) return send({ message: 'Synthetic messaging outage' }, 503)
+    if (id === 102 && holdConversation) await new Promise(resolve => { releaseConversation = resolve; notifyConversationHeld?.() })
+    if (request.method === 'POST') conversationRows[id].push({ id: Date.now(), sender: 'provider', content: JSON.parse(body).content, records: [], created_at: new Date().toISOString() })
+    return send({ data: conversationRows[id], has_more: false })
+  }
   if (path === 'overview') return send({ data: { checked_at: '2026-11-02T10:00:00Z', totals: { connected_patients: linked && !rosterEmpty ? 1 : 0, unread_messages: 0, shared_assessments: linked && consent.quizzes && quizShareActive ? 1 : 0 } } })
   if (path === 'clients') return send(rosterEmpty ? [] : [client()])
   if (path === 'quiz-shares') return send(paginated(linked && consent.quizzes && quizShareActive ? [{ id: 1, user_id: 10, sender: 'Test', quiz_title: 'Fixture shared assessment', completed_at: '2026-10-09T10:00:00Z', read_at: quizShareRead ? '2026-10-10T10:00:00Z' : null }] : []))
@@ -193,7 +207,22 @@ try {
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
     await page.getByRole('heading', { name: 'Connected patients', exact: true }).waitFor()
-    assert.equal(await page.getByRole('heading', { name: 'Connected patients', exact: true }).locator('..').getByText('1', { exact: true }).count(), 1)
+    assert.equal(await page.getByRole('heading', { name: 'Connected patients', exact: true }).locator('xpath=ancestor::section[1]').getByText('1', { exact: true }).count(), 1)
+    await page.getByRole('button', { name: 'Messages', exact: true }).click()
+    await page.getByText('Synthetic conversation one', { exact: true }).waitFor()
+    holdConversation = true
+    const heldConversation = new Promise(resolve => { notifyConversationHeld = resolve })
+    const secondConversation = page.waitForRequest(request => request.url().includes('/conversations/102/messages'))
+    await page.getByRole('button', { name: 'Sample patient B', exact: true }).click()
+    await secondConversation
+    await heldConversation
+    assert.equal(await page.getByText('Synthetic conversation one', { exact: true }).count(), 0, 'previous conversation must be hidden while the next request is pending')
+    holdConversation = false
+    releaseConversation?.()
+    await page.getByText('Synthetic conversation two', { exact: true }).waitFor()
+    await reviewPanel(page, 'provider-messages')
+    await page.getByRole('button', { name: 'Overview', exact: true }).click()
+    await page.getByRole('heading', { name: 'Connected patients', exact: true }).waitFor()
     await reviewThemes(page, 'provider-overview')
     await page.getByRole('button', { name: 'View patients', exact: true }).click()
     await page.getByRole('button', { name: 'Open insights' }).waitFor()
@@ -210,14 +239,16 @@ try {
     assert.equal(new URL(page.url()).pathname, '/provider')
     assert.equal(await page.locator('a[href^="/admin"]').count(), 0)
     await page.getByRole('button', { name: 'Shared assessment results', exact: true }).click()
-    await page.getByText('Test shared Fixture shared assessment').waitFor()
+    await page.getByRole('heading', { name: 'Fixture shared assessment', exact: true }).waitFor()
+    await page.getByText('Shared by Test', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'View result', exact: true }).click()
-    await page.getByText('Score: 4 / 27', { exact: true }).waitFor()
+    await reviewPanel(page, 'provider-shared-assessments')
+    await page.getByLabel('Score: 4 / 27', { exact: true }).waitFor()
     await page.getByText('Fixture recommendation.', { exact: true }).waitFor()
     quizShareActive = false
     await page.getByRole('button', { name: 'Refresh shared results', exact: true }).click()
     await page.getByText('No results have been shared with you yet.').waitFor()
-    assert.equal(await page.getByText('Score: 4 / 27', { exact: true }).count(), 0)
+    assert.equal(await page.getByLabel('Score: 4 / 27', { exact: true }).count(), 0)
     quizShareActive = true
     await page.getByRole('button', { name: 'Patients', exact: true }).click()
     await page.getByLabel('Search patients').fill('missing-patient')
@@ -322,10 +353,12 @@ try {
     await page.getByRole('button', { name: 'Apply filters', exact: true }).click()
     assert.equal((await filteredAudit).status(), 200)
     await page.getByRole('button', { name: 'Clear', exact: true }).click()
+    await reviewPanel(page, 'provider-audit-log')
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     await page.getByLabel('Name', { exact: true }).fill('Saved Provider')
     await page.getByLabel('Practice', { exact: true }).fill('Updated Test Practice')
     await page.getByLabel('Timezone', { exact: true }).fill('Africa/Lagos')
+    await reviewPanel(page, 'provider-settings')
     await page.getByRole('button', { name: 'Save settings' }).click()
     await page.getByText('Saved Provider', { exact: true }).waitFor()
     assert.equal(provider.name, 'Saved Provider')

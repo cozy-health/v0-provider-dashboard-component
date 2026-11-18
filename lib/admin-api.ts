@@ -1,4 +1,5 @@
 import { mutationHeaders } from "./csrf"
+import { assertMetricResponse } from "./admin-metric-response"
 export type Cell = { status: "available" | "suppressed" | "immature" | "unavailable"; count: number | "<5" | null; cohort?: number | "<5" | null; rate?: number | null }
 export type Cohort = { week: string; signups: Cell; retention: { d1: Cell; d7: Cell; d30: Cell } }
 export type Meta = { release: string; timezone: string; precision: string; activity_definition: string; window: { from: string; to_exclusive: string } }
@@ -14,5 +15,7 @@ export async function adminApi<T>(path: string, options: RequestInit = {}): Prom
     if ((response.status === 401 || response.status === 403 && path.startsWith("metrics/")) && path !== "auth/login") window.location.replace("/admin/login?expired=1")
     throw new AdminApiError(data.errors ? Object.entries(data.errors).map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(" ") : "Invalid value"}`).join("\n") : data.message || "Admin data could not be loaded.", response.status, data.errors ?? {})
   }
+  const metric = path.split("?")[0]?.match(/^metrics\/(overview|usage|insights|retention|safety)$/)?.[1]
+  if (metric) assertMetricResponse(data, metric)
   return data
 }
