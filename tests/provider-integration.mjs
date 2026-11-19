@@ -191,11 +191,22 @@ try {
   if (playwright) {
     browser = await playwright.chromium.launch({ headless: true, ...(process.env.PROVIDER_CHROMIUM_PATH ? { executablePath: process.env.PROVIDER_CHROMIUM_PATH } : {}) })
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    await context.addInitScript(() => {
+      window.cozySyntheticToastDiagnostics = []
+      new MutationObserver(() => {
+        for (const node of document.querySelectorAll('[data-sonner-toast]')) {
+          const text = node.textContent || ''
+          if (text && !window.cozySyntheticToastDiagnostics.includes(text)) window.cozySyntheticToastDiagnostics.push(text)
+        }
+      }).observe(document, { childList: true, subtree: true })
+    })
     // Keep development hot-reload traffic out of the HTTP portal contract test.
     await context.routeWebSocket("**/_next/webpack-hmr**", () => {})
     const page = await context.newPage()
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
+    const browserErrors = []
+    page.on('console', message => { if (message.type() === 'error') browserErrors.push(message.text()) })
     page.on('dialog', dialog => dialog.accept())
     await page.goto(origin)
     await page.waitForFunction(() => {
@@ -330,9 +341,15 @@ try {
     assert.equal(assignments.length, 0)
     await page.getByRole('button', { name: 'Generate monthly report' }).click()
     await page.getByRole('button', { name: 'Download PDF' }).waitFor()
-    const downloaded = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Download PDF' }).click()
-    assert.equal((await downloaded).suggestedFilename(), 'provider-report-1.pdf')
+    const [downloaded] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download PDF' }).click(),
+    ]).catch(async error => {
+      const toasts = await page.evaluate(() => window.cozySyntheticToastDiagnostics)
+      console.log('Synthetic PDF download failure diagnostics:', JSON.stringify({ pageErrors: errors, browserErrors, toasts }))
+      throw error
+    })
+    assert.equal(downloaded.suggestedFilename(), 'provider-report-1.pdf')
     await page.getByRole('tab', { name: 'Provider notes' }).click()
     await page.getByLabel('New provider note').waitFor()
     // Opening the tab starts its own list request. Finish that pre-revocation
