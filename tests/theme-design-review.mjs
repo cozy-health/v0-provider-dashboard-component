@@ -73,7 +73,9 @@ export async function reviewThemes(page, name) {
       assert.equal(await trigger.evaluate(el => el === document.activeElement), true)
       await trigger.click()
       await drawer.waitFor()
-      await page.mouse.click(width - 4, 450)
+      // Use the backdrop's actionability checks after reopening, rather than
+      // injecting a raw pointer event before the portal has settled.
+      await page.locator('[data-slot="sheet-overlay"]').click({ position: { x: width - 4, y: 450 } })
       await drawer.waitFor({ state: 'hidden' })
       await trigger.click()
       await drawer.waitFor()

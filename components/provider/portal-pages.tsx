@@ -33,7 +33,7 @@ export function ProviderSettings({ provider, saved }: { provider: Provider; save
       </form>
     </WorkspaceSection>
     <aside className="space-y-5">
-      <WorkspaceSection title="Provider credentials" description="Professional verification is managed separately from your profile."><dl className="workspace-details"><div><dt>Licence number</dt><dd>{provider.license_number || "Not supplied"}</dd></div>{provider.license_state && <div><dt>Registration region</dt><dd>{provider.license_state}</dd></div>}<div><dt>Verification</dt><dd><Badge variant="secondary">{provider.is_verified ? "Verified provider" : "Verification pending"}</Badge></dd></div></dl></WorkspaceSection>
+      <WorkspaceSection title="Email verification" description="Email ownership is the verification required for your provider account."><dl className="workspace-details"><div><dt>Registered email</dt><dd>{provider.email}</dd></div><div><dt>Email status</dt><dd><Badge variant="secondary">{provider.is_verified ? "Email verified" : "Email verification required"}</Badge></dd></div></dl></WorkspaceSection>
       <WorkspaceSection title="Sign-in protection" description="Review your account’s existing security controls."><a href="/provider/security" className="workspace-text-link">Manage sign-in protection →</a></WorkspaceSection>
     </aside>
   </div>
