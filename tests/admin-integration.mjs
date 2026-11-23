@@ -167,7 +167,7 @@ try {
   await page.reload(); await page.getByRole('heading', { name: 'Admin access could not be checked' }).waitFor()
   availableService = true; await page.getByRole('link', { name: 'Retry', exact: true }).click()
   await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
-  await page.getByRole('button', { name: /Switch to (light|dark) mode/ }).waitFor()
+  await page.getByRole('button', { name: 'Appearance and layout', exact:true }).waitFor()
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
   await page.getByRole('dialog').waitFor()
   const drawerBounds = await page.getByRole('dialog').boundingBox()

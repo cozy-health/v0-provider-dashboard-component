@@ -1,3 +1,5 @@
+const preferences = {theme:'system',accent:'blue',layout:'overview',density:'comfortable',sidebar_collapsed:false,tour_state:'new',tour_step:0,tour_version:1}
+import { setReviewTheme } from './theme-design-review.mjs'
 // All accounts and grants are isolated fixtures. No live emails or paid access.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -14,6 +16,7 @@ const backend = createServer(async (request, response) => {
  let raw = ''; for await (const chunk of request) raw += chunk
  if (path === 'auth/login') return send({ token: 'development-access-fixture', expires_at: new Date(Date.now() + 1800000).toISOString() })
  if (request.headers.authorization !== 'Bearer development-access-fixture') return send({}, 401)
+ if (path === 'workspace-preferences') { if(request.method === 'PATCH') Object.assign(preferences,JSON.parse(raw));return send({data:preferences}) }
  if (path === 'auth/session') return send({ role: 'admin', name: 'Test access reviewer', capabilities: ['admin:subscriptions', ...(enabled ? ['admin:development-access'] : [])] })
  if (path === 'operations/summary') return send({ data: { totals: {}, attention: [], activity: [], checked_at: new Date().toISOString() } })
  if (path.startsWith('metrics/')) return send({ meta: { release: '2026-10-01', timezone: 'UTC', window: { from: '2026-09-01', to_exclusive: '2026-10-01' } }, data: path === 'metrics/retention' ? [] : { summary: {}, daily: [], moods: [], triggers: [], coping: [], helpfulness: [], mood_trends: [], devices: [], enrollments: [], completions: [], subscription_changes: [], features: [] } })
@@ -70,7 +73,7 @@ try {
  await page.getByRole('button', { name: 'Revoke test access', exact: true }).waitFor(); assert.equal(writes, 1)
  const shots = '../output/development-access-preview'; await mkdir(shots, { recursive: true })
  await page.screenshot({ path: `${shots}/desktop-light.png`, fullPage: true })
- await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+ await setReviewTheme(page, 'dark')
  await page.setViewportSize({ width: 390, height: 844 })
  await page.screenshot({ path: `${shots}/phone-dark.png`, fullPage: true })
  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false)

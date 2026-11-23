@@ -12,12 +12,12 @@ import { useDesktopNavigation } from "@/hooks/use-desktop-navigation"
 
 type ShellProps = {
   audience: string; context: string; name: string; navigation: ReactNode;
-  appearance: ReactNode; accountAction: ReactNode; children: ReactNode
+  accountAction: ReactNode; children: ReactNode
 }
 export function WorkspaceShell(props: ShellProps) {
   return <WorkspacePreferences role={props.audience === "Administration" ? "admin" : "provider"}><WorkspaceShellBody {...props} /></WorkspacePreferences>
 }
-function WorkspaceShellBody({ audience, context, name, navigation, appearance, accountAction, children }: ShellProps) {
+function WorkspaceShellBody({ audience, context, name, navigation, accountAction, children }: ShellProps) {
   const preferences = useWorkspacePreferences()
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [open, setOpen] = useState(false)
@@ -41,7 +41,7 @@ function WorkspaceShellBody({ audience, context, name, navigation, appearance, a
           <SheetTrigger asChild><Button className="lg:hidden" size="icon" variant="outline" aria-label="Open navigation"><Menu size={20} /></Button></SheetTrigger>
           <Button className="workspace-collapse hidden lg:inline-flex" size="icon" variant="ghost" disabled={preferences.loading || preferences.saving || Boolean(preferences.error)} aria-label={preferences.value.sidebar_collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => void preferences.update({ sidebar_collapsed: !preferences.value.sidebar_collapsed })}>{preferences.value.sidebar_collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}</Button>
           <div className="workspace-breadcrumb"><span className="hidden sm:inline">{audience}</span><ChevronRight className="hidden sm:block" size={14} aria-hidden="true" /><strong>{context}</strong></div>
-          <div className="workspace-topbar-actions"><span className="workspace-private-label"><ShieldCheck size={14} aria-hidden="true" />Private workspace</span>{appearance}<Button variant="outline" className="workspace-appearance-trigger" aria-label="Appearance and layout" onClick={() => setAppearanceOpen(true)}><Paintbrush size={16} /><span className="hidden sm:inline">Appearance</span></Button><span className="workspace-topbar-avatar" aria-label={`Signed in as ${name}`}>{initials}</span></div>
+          <div className="workspace-topbar-actions"><span className="workspace-private-label"><ShieldCheck size={14} aria-hidden="true" />Private workspace</span><Button variant="outline" className="workspace-appearance-trigger" aria-label="Appearance and layout" onClick={() => setAppearanceOpen(true)}><Paintbrush size={16} /><span className="hidden sm:inline">Appearance</span></Button></div>
         </header>
         <SheetContent side="left" className="workspace-drawer w-[min(19rem,calc(100%-2rem))] gap-0 p-0">
           <SheetHeader className="px-6 py-6 pr-16"><SheetTitle>Cozy Health</SheetTitle><SheetDescription>{audience} navigation</SheetDescription></SheetHeader>

@@ -1,3 +1,4 @@
+import { setReviewTheme } from './theme-design-review.mjs'
 // Browser acceptance against the local synthetic preview only.
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -26,9 +27,9 @@ try {
   await page.goto(base + '/__preview/provider')
   await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Appearance and layout' }).waitFor()
-  await page.getByRole('button', { name: /Switch to (light|dark) mode/ }).filter({ visible: true }).waitFor()
+  assert.equal(await page.getByRole('button', { name: /Switch to (light|dark) mode/ }).count(), 0)
   await page.waitForFunction(() => !document.querySelector('.workspace-collapse')?.disabled)
-  if (await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).filter({ visible: true }).count()) await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).filter({ visible: true }).click()
+  await setReviewTheme(page, 'dark')
   await capture('provider-overview-dark')
   await page.getByRole('button', { name: /workspace guide/i }).click()
   await page.getByRole('dialog').waitFor()
@@ -43,7 +44,7 @@ try {
   await page.locator('.care-trend-chart .recharts-line-curve').first().waitFor()
   assert.equal(await page.locator('.care-trend-chart').first().locator('.recharts-line-dot').count(), 7)
   await capture('provider-patient-trend-dark')
-  await page.getByRole('button', { name: 'Switch to light mode', exact: true }).filter({visible:true}).click()
+  await setReviewTheme(page, 'light')
   await page.waitForFunction(() => !document.documentElement.classList.contains('dark'))
   await capture('provider-patient-trend-light')
   const insightRoute = '**/api/provider/clients/10/insights?*'
@@ -67,7 +68,7 @@ try {
   await page.getByRole('tab', { name: 'Other shared data', exact: true }).click()
   await page.locator('.care-shared-journal').waitFor()
   await capture('provider-shared-journal-light')
-  await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).filter({visible:true}).click()
+  await setReviewTheme(page, 'dark')
   await page.getByRole('button', { name: 'Messages', exact: true }).click()
   await page.getByRole('complementary', { name: 'Conversations' }).waitFor()
   await page.getByRole('textbox', { name: 'Message', exact: true }).waitFor()

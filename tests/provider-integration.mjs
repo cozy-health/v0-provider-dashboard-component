@@ -1,6 +1,6 @@
 // Isolated contract fixtures. Never connects to the deployed API or real patients.
 import assert from 'node:assert/strict'
-import { reviewThemes, reviewPanel } from './theme-design-review.mjs'
+import { reviewThemes, reviewPanel, setReviewTheme } from './theme-design-review.mjs'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
 import { createIsolatedTestApp } from './isolated-next-app.mjs'
@@ -309,11 +309,11 @@ try {
     await page.getByText('Score: 4', { exact: false }).waitFor()
     await page.getByText('42 words', { exact: false }).waitFor()
     await page.screenshot({ path: '../docs/PD5_PATIENT_LIGHT.png', fullPage: true })
-    await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+    await setReviewTheme(page, 'dark')
     await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
     assert.equal(await page.locator('html').getAttribute('class'), 'dark')
     await page.screenshot({ path: '../docs/PD5_PATIENT_DARK.png', fullPage: true })
-    await page.getByRole('button', { name: 'Switch to light mode' }).click()
+    await setReviewTheme(page, 'light')
     await page.getByRole('tab', { name: 'Provider notes' }).click()
     await page.getByText('No provider notes yet.').waitFor()
     await page.getByLabel('New provider note').fill('Persistent test note')
