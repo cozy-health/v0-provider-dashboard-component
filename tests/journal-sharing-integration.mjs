@@ -1,4 +1,6 @@
-﻿// Runs the real dashboard against isolated, fictional local API fixtures.
+const preferences = {theme:'system',accent:'blue',layout:'overview',density:'comfortable',sidebar_collapsed:false,tour_state:'new',tour_step:0,tour_version:1}
+import { setReviewTheme } from './theme-design-review.mjs'
+// Runs the real dashboard against isolated, fictional local API fixtures.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
@@ -15,6 +17,7 @@ const backend = createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json')
   const send = (data, status=200) => { res.writeHead(status); res.end(JSON.stringify(data)) }
   if (req.headers.authorization !== 'Bearer fictional-journal-test-token') return send({},401)
+  if (path === 'workspace-preferences') { const chunks=[];for await(const chunk of req) chunks.push(chunk);if(req.method === 'PATCH') Object.assign(preferences,JSON.parse(Buffer.concat(chunks).toString()));return send({data:preferences}) }
   if (path === 'me') return send({ data: { provider } })
   if (path === 'consent-config') return send({consent:{enforce_blocking:false,documents:{}}})
   if (path === 'me/consents') return send({owner_id:provider.id,data:[]})
@@ -64,7 +67,7 @@ try {
   await mkdir('scratch/journal-sharing-review',{recursive:true})
   for (const theme of ['light','dark']) {
     const isDark=await page.evaluate(()=>document.documentElement.classList.contains('dark'))
-    if(isDark!==(theme==='dark')) await page.getByRole('button',{name:isDark?'Switch to light mode':'Switch to dark mode',exact:true}).filter({visible:true}).click()
+    if(isDark!==(theme==='dark')) await setReviewTheme(page, theme)
     await page.getByRole('button',{name:'Review shared journal copy',exact:true}).click()
     await page.getByText(/FICTIONAL SHARED COPY/).waitFor()
     await page.screenshot({path:`scratch/journal-sharing-review/${theme}.png`,fullPage:true})

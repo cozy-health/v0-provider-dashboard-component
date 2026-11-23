@@ -1,3 +1,4 @@
+import { setReviewTheme } from './theme-design-review.mjs'
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
@@ -82,7 +83,7 @@ try {
  await page.goto(origin + '/admin')
  await page.getByRole('heading', { name: 'User registrations' }).waitFor()
  await page.addStyleTag({ content: 'nextjs-portal { display:none !important }' })
- await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).click()
+ await setReviewTheme(page, 'dark')
  await page.screenshot({ animations: 'disabled', path: shots + '/overview-dark.png', fullPage: true })
  for (const width of [768, 390, 320]) {
   await page.setViewportSize({ width, height: 900 })

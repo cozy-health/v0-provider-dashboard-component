@@ -1,4 +1,4 @@
-import { reviewThemes } from './theme-design-review.mjs'
+import { reviewThemes, setReviewTheme } from './theme-design-review.mjs'
 // Local contract fixtures only. No production accounts, email, or API writes.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -96,7 +96,7 @@ try {
  assert.equal(await navigation.getByRole('link', { name: 'Overview', exact: true }).evaluate(el => el === document.activeElement), true)
 
  await reviewThemes(page, 'admin-dashboard')
- await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+ await setReviewTheme(page, 'dark')
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
  assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(18, 20, 22)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
@@ -107,8 +107,9 @@ try {
  await mkdir('../docs/validation/admin-phases', { recursive: true })
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-dark.png', fullPage: true })
  await page.reload(); await page.getByRole('heading', { name: 'User registrations' }).waitFor()
- assert.equal(await page.getByRole('button', { name: 'Switch to light mode' }).count(), 1)
- await page.getByRole('button', { name: 'Switch to light mode' }).click()
+ assert.equal(await page.getByRole('button', { name: 'Appearance and layout', exact:true }).count(), 1)
+ assert.equal(await page.getByRole('button', { name: /Switch to (light|dark) mode/ }).count(), 0)
+ await setReviewTheme(page, 'light')
  await page.waitForFunction(() => !document.documentElement.classList.contains('dark'))
  assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(245, 246, 248)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {

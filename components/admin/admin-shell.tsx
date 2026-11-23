@@ -6,7 +6,6 @@ import { LogOut } from "lucide-react"
 import { adminApi } from "@/lib/admin-api"
 import { Button } from "@/components/ui/button"
 import { WorkspaceShell } from "@/components/workspace/workspace-shell"
-import { AdminThemeSelector } from "./theme-selector"
 import { adminModules } from "@/lib/admin-modules"
 import "./admin-theme.css"
 import { AdminIcon, moduleVisual } from "./admin-visuals"
@@ -44,7 +43,7 @@ export function AdminShell({ expires, children, name = "Admin", capabilities = [
    return <Link key={href} href={href} prefetch={false} aria-current={pathname === href ? "page" : undefined} className="admin-nav-link"><AdminIcon small visual={moduleVisual(key)} /><span>{label}</span></Link>
   })}</div></div>
  })}</nav>
- return <div className="cozy-admin"><WorkspaceShell audience="Administration" context={context} name={name} navigation={navigation} appearance={<AdminThemeSelector />} accountAction={<Button variant="ghost" disabled={busy} onClick={logout} aria-label={busy ? "Signing out..." : "Logout"} title="Logout"><LogOut className="size-4" /></Button>}>
+ return <div className="cozy-admin"><WorkspaceShell audience="Administration" context={context} name={name} navigation={navigation} accountAction={<Button variant="ghost" disabled={busy} onClick={logout} aria-label={busy ? "Signing out..." : "Logout"} title="Logout"><LogOut className="size-4" /></Button>}>
   {error && <p role="alert" className="mb-5 rounded-xl border border-destructive/30 bg-card p-4 text-sm text-destructive">{error}</p>}{children}
  </WorkspaceShell></div>
 }

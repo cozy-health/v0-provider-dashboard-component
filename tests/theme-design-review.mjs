@@ -1,6 +1,36 @@
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 
+export async function themeControl(page) {
+  return page.getByRole('button', { name: 'Appearance and layout', exact: true }).filter({visible:true})
+    .or(page.getByRole('button', { name: /Switch to (light|dark) mode/ }).filter({visible:true})).first()
+}
+
+export async function setReviewTheme(page, theme, {keyboard = false} = {}) {
+  const control = await themeControl(page)
+  await control.waitFor()
+  const appearance = page.getByRole('button', {name:'Appearance and layout',exact:true}).filter({visible:true})
+  if (await appearance.count()) {
+    if (keyboard) { await appearance.focus(); await page.keyboard.press('Enter') } else await appearance.click()
+    const dialog = page.getByRole('dialog').filter({has:page.getByRole('heading',{name:'Workspace preferences',exact:true})})
+    const label = theme === 'dark' ? 'Dark' : 'Light'
+    const option = dialog.getByRole('button',{name:label,exact:true})
+    if (keyboard) {
+      await page.waitForFunction(label => [...document.querySelectorAll('[role="dialog"] button')].some(button => button.textContent.trim() === label && !button.disabled), label)
+      await option.focus(); await page.keyboard.press('Enter')
+    } else await option.click()
+    await page.waitForFunction(dark => document.documentElement.classList.contains('dark') === dark, theme === 'dark')
+    await page.waitForFunction(() => ![...document.querySelectorAll('[role="dialog"] [aria-busy]')].some(element => element.getAttribute('aria-busy') === 'true'))
+    await page.keyboard.press('Escape'); await dialog.waitFor({state:'hidden'})
+  } else {
+    const dark = await page.locator('html').evaluate(el => el.classList.contains('dark'))
+    if (dark !== (theme === 'dark')) {
+      if (keyboard) { await control.focus(); await page.keyboard.press('Enter') } else await control.click()
+    }
+    await page.waitForFunction(dark => document.documentElement.classList.contains('dark') === dark, theme === 'dark')
+  }
+}
+
 // In-page provider workspaces deliberately reset on document reload. Inspect their
 // responsive states without discarding the selected screen or its unsaved form.
 export async function reviewPanel(page, name) {
@@ -12,7 +42,7 @@ export async function reviewPanel(page, name) {
     await page.setViewportSize({ width, height: 900 })
     for (const dark of [false, true]) {
       if (await page.locator('html').evaluate(el => el.classList.contains('dark')) !== dark) {
-        await page.getByRole('button', { name: dark ? 'Switch to dark mode' : 'Switch to light mode', exact: true }).filter({ visible: true }).click()
+        await setReviewTheme(page, dark ? 'dark' : 'light')
       }
       await page.waitForFunction(value => document.documentElement.classList.contains('dark') === value, dark)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name}: overflow at ${width}`)
@@ -21,12 +51,12 @@ export async function reviewPanel(page, name) {
   }
   await page.setViewportSize(original)
   if (await page.locator('html').evaluate(el => el.classList.contains('dark')) !== originalDark) {
-    await page.getByRole('button', { name: originalDark ? 'Switch to dark mode' : 'Switch to light mode', exact: true }).filter({ visible: true }).click()
+    await setReviewTheme(page, originalDark ? 'dark' : 'light')
   }
 }
 
 export async function reviewThemes(page, name) {
-  await page.getByRole('button', { name: /Switch to (light|dark) mode/ }).filter({ visible: true }).waitFor()
+  await (await themeControl(page)).waitFor()
   // Hide Next's development status badge only; it is absent from production.
   await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
   const directory = process.env.COZY_INTEGRATION_FIXTURE ? 'scratch/theme-review' : 'docs/validation/theme-review'
@@ -37,9 +67,9 @@ export async function reviewThemes(page, name) {
     await page.setViewportSize({ width, height: 900 })
     for (const theme of ['light', 'dark']) {
       const dark = await page.evaluate(() => document.documentElement.classList.contains('dark'))
-      if (dark !== (theme === 'dark')) await page.getByRole('button', { name: dark ? 'Switch to light mode' : 'Switch to dark mode', exact: true }).filter({ visible: true }).click()
+      if (dark !== (theme === 'dark')) await setReviewTheme(page, theme)
       await page.waitForFunction(value => document.documentElement.classList.contains('dark') === (value === 'dark'), theme)
-      const button = page.getByRole('button', { name: theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode', exact: true }).filter({ visible: true })
+      const button = await themeControl(page)
       await button.waitFor()
       assert.equal(await button.count(), 1)
       const bounds = await button.boundingBox()
@@ -87,11 +117,8 @@ export async function reviewThemes(page, name) {
     }
   }
   await page.reload()
-  await page.getByRole('button', { name: 'Switch to light mode', exact: true }).filter({ visible: true }).waitFor()
-  await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.getAttribute('aria-label') === 'Switch to light mode' && !button.disabled))
-  await page.getByRole('button', { name: 'Switch to light mode', exact: true }).filter({ visible: true }).focus()
-  await page.keyboard.press('Enter')
-  await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).filter({ visible: true }).waitFor()
+  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
+  await setReviewTheme(page, 'light', {keyboard:true})
   assert.equal(await page.evaluate(() => localStorage.getItem('theme')), 'light')
   await page.evaluate(() => localStorage.removeItem('theme'))
   await page.reload()

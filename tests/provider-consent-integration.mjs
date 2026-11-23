@@ -1,4 +1,6 @@
-﻿// Real provider UI against synthetic local fixtures only; no deployed API or inbox.
+const preferences = {theme:'system',accent:'blue',layout:'overview',density:'comfortable',sidebar_collapsed:false,tour_state:'new',tour_step:0,tour_version:1}
+import { setReviewTheme } from './theme-design-review.mjs'
+// Real provider UI against synthetic local fixtures only; no deployed API or inbox.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
@@ -17,6 +19,7 @@ const backend = createServer(async (req, res) => {
   const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {}
   const send = (data, status = 200) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(data)) }
   if (req.headers.authorization !== 'Bearer fictional-consent-token') return send({}, 401)
+  if (path === 'workspace-preferences') { if(req.method === 'PATCH') Object.assign(preferences,body); return send({data:preferences}) }
   if (path === 'me') return send({ data: { provider } })
   if (path === 'consent-config') return mode === 'failure' ? send({message:'Synthetic outage'},503) : send({consent:configuration()})
   if (path === 'me/consents') {
@@ -91,7 +94,7 @@ try {
     assert.equal(await page.getByRole('button',{name:'Accept',exact:true}).count(),0)
   }
   await mkdir('scratch/provider-consent-review',{recursive:true})
-  if (await page.evaluate(()=>document.documentElement.classList.contains('dark'))) await page.getByRole('button',{name:'Switch to light mode',exact:true}).filter({visible:true}).click()
+  if (await page.evaluate(()=>document.documentElement.classList.contains('dark'))) await setReviewTheme(page, 'light')
   await page.screenshot({path:'scratch/provider-consent-review/error-light-390.png',fullPage:true})
   async function errorContrast() {
     return page.getByRole('alert').locator('p').first().evaluate(element=>{
@@ -112,13 +115,13 @@ try {
   console.log('Light error text contrast:',lightContrast)
   assert.ok(lightContrast>=4.5,'Normal error text must meet 4.5:1 contrast in light mode')
 
-  await page.getByRole('button',{name:'Switch to dark mode',exact:true}).filter({visible:true}).click()
-  await page.getByRole('button',{name:'Switch to light mode',exact:true}).filter({visible:true}).waitFor()
+  await setReviewTheme(page, 'dark')
+  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
   await page.setViewportSize({width:320,height:740})
   await page.evaluate(()=>{document.documentElement.style.fontSize='200%'})
   const mobileHeader = page.getByRole('button',{name:'Open navigation',exact:true}).locator('xpath=ancestor::header')
-  const brandBounds = await mobileHeader.getByText('Cozy Health',{exact:true}).evaluate(node=>{const range=document.createRange();range.selectNodeContents(node);const r=range.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})
-  const themeBounds = await mobileHeader.getByRole('button',{name:/Switch to (light|dark) mode/}).boundingBox()
+  const brandBounds = await mobileHeader.locator('.workspace-breadcrumb').evaluate(node=>{const range=document.createRange();range.selectNodeContents(node);const r=range.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})
+  const themeBounds = await mobileHeader.getByRole('button',{name:'Appearance and layout',exact:true}).boundingBox()
   assert.ok(themeBounds)
   assert.equal(brandBounds.x < themeBounds.x+themeBounds.width && brandBounds.x+brandBounds.width > themeBounds.x && brandBounds.y < themeBounds.y+themeBounds.height && brandBounds.y+brandBounds.height > themeBounds.y,false,'Large-text provider branding must not overlap the theme control')
   await page.screenshot({path:'scratch/provider-consent-review/error-dark-large-text.png',fullPage:true})

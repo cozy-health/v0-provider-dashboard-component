@@ -1,4 +1,5 @@
-﻿import assert from 'node:assert/strict'
+import { setReviewTheme } from './theme-design-review.mjs'
+import assert from 'node:assert/strict'
 import { mkdir, readFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 const origin='http://localhost:3000'
@@ -47,7 +48,7 @@ try {
  await page.getByRole('tab',{name:'Wellness',exact:true}).click();await page.getByRole('heading',{name:'Mood distribution'}).waitFor();await page.screenshot({animations:'disabled',path:shots+'/wellness-light.png',fullPage:true})
  await page.getByRole('tab',{name:'Retention',exact:true}).click();await page.getByRole('heading',{name:'Signup cohort retention'}).waitFor()
  await page.screenshot({animations:'disabled',path:shots+'/retention-light.png',fullPage:true})
- await page.goto(origin+'/admin');await page.getByRole('heading',{name:'Needs attention'}).waitFor();await page.getByRole('button',{name:'Switch to dark mode',exact:true}).click()
+ await page.goto(origin+'/admin');await page.getByRole('heading',{name:'Needs attention'}).waitFor();await setReviewTheme(page, 'dark')
  await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({animations:'disabled',path:shots+'/overview-dark.png',fullPage:true})
  for(const width of [768,390,320]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({animations:'disabled',path:shots+`/overview-${width}.png`,fullPage:true})}
  await page.goto(origin+'/admin/datacenter?tab=retention');await page.getByRole('heading',{name:'Signup cohort retention'}).waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
