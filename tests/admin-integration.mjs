@@ -12,6 +12,7 @@ const meta = { release: '2026-10-01', timezone: 'UTC', precision: 'Counts rounde
 const operations = { api: 'ok', database: 'ok', checked_at: '2026-10-09T12:00:00Z', source: 'Current request; no historical window.', ...Object.fromEntries(['availability_history', 'latency_p95', 'latency_p99', 'error_rate', 'queue_health', 'deployment'].map(key => [key, { status: 'unavailable' }])) }
 let availableService = true, revoked = false, empty = false, backendCalls = 0
 const metricRanges = new Map()
+let preferences = { theme: "system", accent: "blue", layout: "overview", density: "comfortable", sidebar_collapsed: false, tour_state: "new", tour_step: 0, tour_version: 1 }
 const backend = createServer(async (request, response) => {
   backendCalls++
   const url = new URL(request.url, 'http://localhost'), path = url.pathname.replace('/api/v1/admin/', '')
@@ -31,6 +32,7 @@ const backend = createServer(async (request, response) => {
   if (request.headers.authorization !== 'Bearer fixture-admin-token' || revoked) return send(403, {})
   if (path === 'operations/summary') return send(200, { data: { checked_at: '2026-10-01T12:00:00Z', totals: {}, attention: [], activity: [] } })
   if (path === 'auth/session') return send(200, { role: 'admin' })
+  if (path === 'workspace-preferences') { let raw = ''; for await (const chunk of request) raw += chunk; const patch = raw ? JSON.parse(raw) : {}; if (request.method === 'PATCH') preferences = { ...preferences, ...patch }; return send(200, { data: preferences }) }
   if (path === 'auth/logout') { revoked = true; return send(200, { message: 'Signed out.' }) }
   const metric = path.replace('metrics/', '')
   const range = url.searchParams.get('range')
@@ -83,8 +85,15 @@ try {
   assert.match(login.headers.get('set-cookie'), /HttpOnly/); assert.match(login.headers.get('set-cookie'), /SameSite=lax/i)
   assert.ok(!cookie.includes('fixture-admin-token'))
   assert.equal((await request('metrics/overview')).status, 200)
+  const preferencesRead = await request('workspace-preferences')
+  assert.equal(preferencesRead.status, 200)
+  const savedAppearance = await request('workspace-preferences', 'PATCH', {theme:'dark'})
+  assert.equal(savedAppearance.status, 200)
+  assert.equal((await savedAppearance.json()).data.theme, 'dark')
+  assert.equal((await (await request('workspace-preferences')).json()).data.theme, 'dark')
   const before = backendCalls
   assert.equal((await request('clients')).status, 404)
+  assert.equal((await request('users', 'PATCH', {theme:'dark'})).status, 404)
   assert.equal((await request('metrics/safety?user_id=1')).status, 422)
   assert.equal((await request('auth/register', 'POST', {})).status, 404)
   assert.equal((await request('auth/login', 'POST', { email: 'x'.repeat(9000) })).status, 413)

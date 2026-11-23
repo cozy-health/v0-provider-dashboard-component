@@ -69,4 +69,4 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     return NextResponse.json(data, { headers })
   } catch { return error("Admin analytics is temporarily unavailable. Please retry.", 503) }
 }
-export { handle as GET, handle as POST, handle as PUT, handle as DELETE }
+export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE }

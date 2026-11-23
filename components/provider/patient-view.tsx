@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
-import { api, Client, Mood, Journal, Assessment, Note, Assignment, Resource } from "@/lib/provider-api"
+import { api, Client, Mood, Journal, type Page, Assessment, Note, Assignment, Resource } from "@/lib/provider-api"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, DataList, Empty, Failure, Loading, useData, date } from "./data-list"
 import { DownloadButton } from "./portal-pages"
 import { MoodInsights } from "./mood-insights"
+
+function JournalHighlights({ userId, openAll }: { userId: number; openAll: () => void }) {
+  const { data, loading, error, reload } = useData<Page<Journal>>(`clients/${userId}/journals?page=1&per_page=20`)
+  return <aside className="care-journal-highlights" aria-label="Shared journal highlights"><div className="care-trend-heading"><span className="care-eyebrow">Shared journals</span><span className="care-data-tag">Sharing enabled</span></div>
+    {loading ? <Loading /> : error ? <Failure error={error} retry={reload} /> : !data?.data.length ? <p className="care-chart-note">No shared journal entries yet.</p> : <><div className="care-journal-previews">{data.data.slice(0,2).map(entry => <article key={entry.id}><h4>{entry.title || "Journal entry"}</h4><p>{entry.type} · {entry.word_count ?? 0} words{entry.has_voice ? " · Voice entry" : ""}</p><time>{date(entry.created_at)}</time></article>)}</div><Button variant="outline" onClick={openAll}>View shared summaries</Button></>}
+    <p className="care-chart-note">Only information available through this patient's current sharing permissions is shown.</p>
+  </aside>
+}
 
 export function PatientView({ id, back }: { id: number; back: () => void }) {
   const { data: client, error, loading, reload, revalidate } = useData<Client>(`clients/${id}`)
@@ -24,7 +32,7 @@ export function PatientView({ id, back }: { id: number; back: () => void }) {
   }, [revalidate])
   return <div className="space-y-6"><div className="flex flex-wrap gap-3"><Button variant="outline" onClick={back}>Back to patients</Button><Button variant="outline" onClick={reload}>Refresh sharing</Button></div>
     {loading ? <Loading /> : error ? <Failure error={error} retry={reload} /> : client && <>
-      <Card><h2 className="break-words text-2xl font-semibold">{client.name} <span className="text-sm font-normal text-muted-foreground">Patient #{id}</span></h2><p className="text-sm text-muted-foreground mt-2">Linked {date(client.linked_at)}</p><div className="flex gap-2 flex-wrap mt-4">{Object.entries(client.consent_flags).map(([type, shared]) => <Badge key={type} variant={shared ? "secondary" : "outline"}>{type}: {shared ? "Shared" : "Not shared"}</Badge>)}</div><p className="text-xs text-muted-foreground mt-3">Sharing is checked every 30 seconds and when you return to this window. Every request enforces current access.</p></Card>
+      <section className="care-patient-identity"><h2 className="break-words text-2xl font-semibold">{client.name} <span className="text-sm font-normal text-muted-foreground">Patient #{id}</span></h2><p className="text-sm text-muted-foreground mt-2">Linked {date(client.linked_at)}</p><div className="flex gap-2 flex-wrap mt-4">{Object.entries(client.consent_flags).map(([type, shared]) => <Badge key={type} variant={shared ? "secondary" : "outline"}>{type}: {shared ? "Shared" : "Not shared"}</Badge>)}</div><p className="text-xs text-muted-foreground mt-3">Sharing is checked every 30 seconds and when you return to this window. Every request enforces current access.</p></section>
       <PatientSections key={JSON.stringify(client.consent_flags)} client={client} activeTab={activeTab} onTabChange={setActiveTab} />
     </>}
   </div>
@@ -43,10 +51,10 @@ function PatientSections({ client, activeTab, onTabChange }: { client: Client; a
   return <div className="space-y-6">
     <div className="flex gap-3 flex-wrap"><Button onClick={report} disabled={busy}>{busy ? "Generating PDF…" : "Generate monthly report"}</Button>{reportId && <DownloadButton id={reportId} />}</div>
     <Tabs value={activeTab === "notes" && !shared.notes ? "overview" : activeTab} onValueChange={onTabChange}><TabsList className="h-auto max-w-full flex-wrap justify-start"><TabsTrigger value="insights">Insights</TabsTrigger><TabsTrigger value="overview">Other shared data</TabsTrigger><TabsTrigger value="resources">Resources</TabsTrigger>{shared.notes && <TabsTrigger value="notes">Provider notes</TabsTrigger>}</TabsList>
-      <TabsContent value="insights" className="mt-5"><MoodInsights userId={client.user_id} enabled={shared.moods} /></TabsContent>
+      <TabsContent value="insights" className="mt-5"><MoodInsights userId={client.user_id} enabled={shared.moods} journalPanel={shared.journals ? <JournalHighlights userId={client.user_id} openAll={() => onTabChange("overview")} /> : undefined} /></TabsContent>
       <TabsContent value="overview" className="space-y-6 mt-5">
         {!Object.values(shared).some(Boolean) && <Empty>This patient has not shared any data types. Resource assignments remain available.</Empty>}
-        {shared.journals && <section><h3 className="text-lg font-semibold mb-4">Journal summaries</h3><DataList<Journal> path={`${base}/journals`} empty="No shared journal entries yet." render={entry => <Card><h4 className="font-medium">{entry.title || "Journal entry"}</h4><p className="text-sm text-muted-foreground">{entry.type} · {entry.word_count ?? 0} words{entry.has_voice ? " · Voice entry" : ""} · {date(entry.created_at)}</p></Card>} /></section>}
+        {shared.journals && <section><h3 className="text-lg font-semibold mb-4">Journal summaries</h3><DataList<Journal> path={`${base}/journals`} empty="No shared journal entries yet." render={entry => <article className="care-shared-journal"><div className="flex flex-wrap items-center justify-between gap-2"><span className="care-eyebrow">Shared journal summary</span><span className="care-data-tag">Journal sharing enabled</span></div><h4>{entry.title || "Journal entry"}</h4><p>{entry.type} · {entry.word_count ?? 0} words{entry.has_voice ? " · Voice entry" : ""} · {date(entry.created_at)}</p><p className="mt-3">Available through this patient’s current sharing permissions.</p></article>} /></section>}
         {shared.quizzes && <section><h3 className="text-lg font-semibold mb-4">Assessment results</h3><DataList<Assessment> path={`${base}/quizzes`} empty="No shared assessment results yet." render={entry => <Card><h4 className="font-medium">{entry.quiz_slug}</h4><p className="text-sm">Score: {entry.score} · {entry.interpretation}</p><p className="text-xs text-muted-foreground mt-2">{date(entry.completed_at)}</p></Card>} /></section>}
       </TabsContent>
       {shared.notes && <TabsContent value="notes" className="mt-5"><Notes path={`${base}/notes`} /></TabsContent>}

@@ -1,8 +1,9 @@
 "use client"
+import { AppearanceSettings } from "@/components/workspace/preferences"
 import { providerFetch, assertProviderResponse } from "@/lib/provider-api"
 
 
-import { BookOpen, Plus, ArrowUpRight, FileText, Clock, ShieldCheck, Pencil, Trash2 } from "lucide-react"
+import { BookOpen, Plus, ArrowUpRight, FileText, Clock, ShieldCheck, Pencil, Trash2, UserRound, Paintbrush } from "lucide-react"
 import { useState } from "react"
 import { WorkspaceSection, WorkspaceNote } from "@/components/workspace/workspace-section"
 import { toast } from "sonner"
@@ -15,12 +16,13 @@ import { Card, DataList, date } from "./data-list"
 
 export function ProviderSettings({ provider, saved }: { provider: Provider; saved: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [settingsSection, setSettingsSection] = useState("profile")
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true)
     try { await api("me", { method: "PATCH", body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) }); toast.success("Settings saved."); saved() }
     catch (err) { toast.error((err as Error).message) } finally { setBusy(false) }
   }
-  return <div className="workspace-settings-grid">
+  return <div className="settings-workspace"><nav aria-label="Settings sections" className="settings-section-navigation"><p>Personal settings</p>{([{ key:'profile', label:'Profile & account', icon:UserRound },{ key:'appearance', label:'Appearance & layout', icon:Paintbrush },{ key:'security', label:'Sign-in & security', icon:ShieldCheck }] as const).map(({key,label,icon:Icon}) => <button type="button" aria-pressed={settingsSection===key} key={key} onClick={() => setSettingsSection(key)}><Icon size={17} />{label}</button>)}</nav><div className="min-w-0"><div hidden={settingsSection !== 'appearance'}><section className="workspace-panel workspace-section-body"><AppearanceSettings /></section></div><div hidden={settingsSection !== 'security'}><WorkspaceSection title="Sign-in & security" description="Manage the protection on your provider account."><div className="settings-security-note"><ShieldCheck size={28} /><div><h3>Keep your workspace protected</h3><p>Review your sign-in controls and trusted devices in your existing security settings.</p></div></div><a href="/provider/security" className="workspace-text-link mt-5">Manage sign-in protection →</a></WorkspaceSection></div><div hidden={settingsSection !== 'profile'}><div className="workspace-settings-grid">
     <WorkspaceSection title="Professional profile" description="Keep your name, practice and report timezone up to date.">
       <form onSubmit={save} className="space-y-6">
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-2">
@@ -36,7 +38,7 @@ export function ProviderSettings({ provider, saved }: { provider: Provider; save
       <WorkspaceSection title="Email verification" description="Email ownership is the verification required for your provider account."><dl className="workspace-details"><div><dt>Registered email</dt><dd>{provider.email}</dd></div><div><dt>Email status</dt><dd><Badge variant="secondary">{provider.is_verified ? "Email verified" : "Email verification required"}</Badge></dd></div></dl></WorkspaceSection>
       <WorkspaceSection title="Sign-in protection" description="Review your account’s existing security controls."><a href="/provider/security" className="workspace-text-link">Manage sign-in protection →</a></WorkspaceSection>
     </aside>
-  </div>
+  </div></div></div></div>
 }
 
 export function ResourceLibrary() {

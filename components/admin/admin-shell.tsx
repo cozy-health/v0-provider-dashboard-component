@@ -15,8 +15,10 @@ const groups: { label: string; items: [string, string][] }[] = [
  { label: "People & Wellness", items: adminModules.filter(([key]) => ["articles", "users", "moods", "expressions", "triggers", "user-triggers", "coping", "user-coping", "challenges", "quizzes"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
  { label: "Community", items: adminModules.filter(([key]) => ["community-moderation", "communities", "reports", "posts", "comments", "members"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
  { label: "Operations", items: adminModules.filter(([key]) => ["packages", "subscriptions", "student-applications", "subscription-events", "development-access", "emails", "support", "privacy-requests"].includes(key)).map(([key, label]) => [`/admin/manage/${key}`, label]) },
+ { label: "Your account", items: [["/admin/settings", "Settings"]] },
 ]
 function capability(href: string) {
+ if (href === "/admin/settings") return "personal"
  const moduleKey = href.split("/").pop()
  if (moduleKey === "community-moderation") return "admin:moderation"
  if (moduleKey === "development-access") return "admin:development-access"
@@ -35,7 +37,7 @@ export function AdminShell({ expires, children, name = "Admin", capabilities = [
  async function logout() { setBusy(true); setError(null); try { await adminApi("auth/logout", { method: "POST", body: "{}" }); window.location.replace("/admin/login") } catch (err) { setError((err as Error).message); setBusy(false) } }
  const context = groups.flatMap(group => group.items).find(([href]) => href === pathname)?.[1] ?? "Administration"
  const navigation = <nav aria-label="Admin navigation">{groups.map(group => {
-  const visible = group.items.filter(([href]) => capabilities.includes(capability(href)))
+  const visible = group.items.filter(([href]) => capability(href) === "personal" || capabilities.includes(capability(href)))
   if (!visible.length) return null
   return <div key={group.label}><p>{group.label}</p><div className="space-y-1">{visible.map(([href, label]) => {
    const key = href === "/admin" ? "dashboard" : href.split("/").pop()!

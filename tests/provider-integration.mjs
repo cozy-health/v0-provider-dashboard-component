@@ -32,6 +32,7 @@ let documentConfig = { enforce_blocking: false, documents: {
 } }
 let documentConsents = []
 const client = () => ({ user_id: 10, name: 'Test', linked_at: '2026-10-01T10:00:00Z', consent_flags: consent, mood_summary: consent.moods ? { period: { key: 'week', label: 'Week', start: '2026-11-01', end: '2026-11-07', timezone: 'UTC', bucket_unit: 'day' }, priority: { level: 'low', status: 'low', negative_days: 1, explanation: '1 negative day in the last 7 days.' }, coverage: { check_ins: 1, recorded_days: 1, possible_days: 7 }, counts: { positive: 0, negative: 1, neutral: 0, unclassified: 0 }, average_intensity: 4, moods: [{ name: 'anxious', count: 1 }], triggers: [{ name: 'work', count: 1 }], coping_strategies: [{ name: 'breathing', count: 1 }], latest_check_in: '2026-11-06T10:00:00Z' } : null })
+let preferences = { theme: "system", accent: "blue", layout: "overview", density: "comfortable", sidebar_collapsed: false, tour_state: "new", tour_step: 0, tour_version: 1 }
 const backend = createServer(async (request, response) => {
   const url = new URL(request.url, 'http://localhost')
   const paginated = data => { const page = Number(url.searchParams.get('page') || 1); const size = Number(url.searchParams.get('per_page') || 20); return { data: data.slice((page - 1) * size, page * size), current_page: page, last_page: Math.max(1, Math.ceil(data.length / size)), total: data.length } }
@@ -51,6 +52,7 @@ const backend = createServer(async (request, response) => {
   }
   if (path === 'auth/forgot-password' || path === 'auth/reset-password') return send({ message: 'Reset request accepted.' })
   if (request.headers.authorization !== 'Bearer test-bearer-secret') return send({ message: 'Unauthorized' }, 401)
+  if (path === 'workspace-preferences') { const patch = body ? JSON.parse(body) : {}; if (request.method === 'PATCH') preferences = { ...preferences, ...patch }; return send({ data: preferences }) }
   if (path === 'auth/logout') return send({ message: 'Signed out' })
   if (path === 'consent-config') return send({ consent: documentConfig })
   if (path === 'me/consents') {
@@ -220,17 +222,17 @@ try {
     await page.getByRole('heading', { name: 'Connected patients', exact: true }).waitFor()
     assert.equal(await page.getByRole('heading', { name: 'Connected patients', exact: true }).locator('xpath=ancestor::section[1]').getByText('1', { exact: true }).count(), 1)
     await page.getByRole('button', { name: 'Messages', exact: true }).click()
-    await page.getByText('Synthetic conversation one', { exact: true }).waitFor()
+    await page.getByRole('region', { name: 'Conversation', exact: true }).getByText('Synthetic conversation one', { exact: true }).waitFor()
     holdConversation = true
     const heldConversation = new Promise(resolve => { notifyConversationHeld = resolve })
     const secondConversation = page.waitForRequest(request => request.url().includes('/conversations/102/messages'))
     await page.getByRole('button', { name: 'Sample patient B', exact: true }).click()
     await secondConversation
     await heldConversation
-    assert.equal(await page.getByText('Synthetic conversation one', { exact: true }).count(), 0, 'previous conversation must be hidden while the next request is pending')
+    assert.equal(await page.getByRole('region', { name: 'Conversation', exact: true }).getByText('Synthetic conversation one', { exact: true }).count(), 0, 'previous conversation must be hidden while the next request is pending')
     holdConversation = false
     releaseConversation?.()
-    await page.getByText('Synthetic conversation two', { exact: true }).waitFor()
+    await page.getByRole('region', { name: 'Conversation', exact: true }).getByText('Synthetic conversation two', { exact: true }).waitFor()
     await reviewPanel(page, 'provider-messages')
     await page.getByRole('button', { name: 'Overview', exact: true }).click()
     await page.getByRole('heading', { name: 'Connected patients', exact: true }).waitFor()
@@ -308,6 +310,7 @@ try {
     await page.getByText('42 words', { exact: false }).waitFor()
     await page.screenshot({ path: '../docs/PD5_PATIENT_LIGHT.png', fullPage: true })
     await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+    await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
     assert.equal(await page.locator('html').getAttribute('class'), 'dark')
     await page.screenshot({ path: '../docs/PD5_PATIENT_DARK.png', fullPage: true })
     await page.getByRole('button', { name: 'Switch to light mode' }).click()
