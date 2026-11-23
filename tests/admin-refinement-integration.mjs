@@ -15,7 +15,7 @@ try {
  await page.getByLabel('Email',{exact:true}).fill('admin@cozy.local');await page.getByLabel('Password',{exact:true}).fill('CozyLocal!Review2026');await page.getByRole('button',{name:'Sign in',exact:true}).click()
  await page.getByRole('heading',{name:'User registrations',exact:true}).waitFor()
  await page.getByRole('heading',{name:'Needs attention',exact:true}).waitFor()
- assert.ok((await page.getByRole('heading',{name:'User registrations',exact:true}).boundingBox()).y<(await page.getByRole('heading',{name:'Needs attention',exact:true}).boundingBox()).y)
+ assert.ok((await page.getByRole('heading',{name:'Needs attention',exact:true}).boundingBox()).y<(await page.getByRole('heading',{name:'User registrations',exact:true}).boundingBox()).y)
  assert.equal(await page.getByRole('navigation',{name:'Admin navigation'}).getByRole('link',{name:'Usage',exact:true}).count(),0)
  const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Download UTC date Registrations CSV',exact:true}).click();const download=await downloadPromise
  const csv=await readFile(await download.path(),'utf8');assert.ok(csv.includes('"release"'));assert.ok(csv.includes('"UTC date","Registrations"'));assert.ok(!csv.includes('example.test'))

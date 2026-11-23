@@ -2,9 +2,10 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { LogOut } from "lucide-react"
+import { ChevronDown, LogOut } from "lucide-react"
 import { adminApi } from "@/lib/admin-api"
 import { Button } from "@/components/ui/button"
+import { useWorkspacePreferences } from "@/components/workspace/preferences"
 import { WorkspaceShell } from "@/components/workspace/workspace-shell"
 import { adminModules } from "@/lib/admin-modules"
 import "./admin-theme.css"
@@ -29,20 +30,33 @@ function capability(href: string) {
  if (moduleKey === "emails") return "admin:email"
  return href.includes("/manage/") && !["user-triggers", "user-coping"].includes(moduleKey!) ? "admin:content" : "admin:metrics"
 }
+function AdminNavigation({pathname, capabilities}: {pathname:string; capabilities:string[]}) {
+ const {value} = useWorkspacePreferences()
+ const [expanded,setExpanded] = useState<Record<string,boolean>>({})
+ useEffect(() => {
+  const active = groups.find(group => group.items.some(([href]) => href === pathname))
+  if (active) setExpanded(previous => previous[active.label] === false ? {...previous,[active.label]:true} : previous)
+ }, [pathname])
+ return <nav aria-label="Admin navigation">{groups.map(group => {
+  const visible = group.items.filter(([href]) => capability(href) === "personal" || capabilities.includes(capability(href)))
+  if (!visible.length) return null
+  return <details key={group.label} className="workspace-nav-group" data-active={group.items.some(([href]) => href === pathname)} open={value.sidebar_collapsed || (expanded[group.label] ?? true)} onToggle={event => {
+    if (value.sidebar_collapsed) return
+    const next = event.currentTarget.open
+    setExpanded(previous => previous[group.label] === next ? previous : {...previous, [group.label]:next})
+  }}><summary><span>{group.label}</span><ChevronDown size={13} aria-hidden="true" /></summary><div className="space-y-1">{visible.map(([href, label]) => {
+   const key = href === "/admin" ? "dashboard" : href.split("/").pop()!
+   return <Link key={href} href={href} prefetch={false} aria-label={label} title={label} aria-current={pathname === href ? "page" : undefined} className="admin-nav-link"><AdminIcon small visual={moduleVisual(key)} /><span>{label}</span></Link>
+  })}</div></details>
+ })}</nav>
+}
 export function AdminShell({ expires, children, name = "Admin", capabilities = ["admin:metrics"] }: { expires: number; children: React.ReactNode; name?: string; capabilities?: string[] }) {
  const pathname = usePathname()
  const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false)
  useEffect(() => { const timer = window.setTimeout(() => window.location.replace("/admin/login?expired=1"), Math.max(0, expires - Date.now())); return () => window.clearTimeout(timer) }, [expires])
  async function logout() { setBusy(true); setError(null); try { await adminApi("auth/logout", { method: "POST", body: "{}" }); window.location.replace("/admin/login") } catch (err) { setError((err as Error).message); setBusy(false) } }
  const context = groups.flatMap(group => group.items).find(([href]) => href === pathname)?.[1] ?? "Administration"
- const navigation = <nav aria-label="Admin navigation">{groups.map(group => {
-  const visible = group.items.filter(([href]) => capability(href) === "personal" || capabilities.includes(capability(href)))
-  if (!visible.length) return null
-  return <div key={group.label}><p>{group.label}</p><div className="space-y-1">{visible.map(([href, label]) => {
-   const key = href === "/admin" ? "dashboard" : href.split("/").pop()!
-   return <Link key={href} href={href} prefetch={false} aria-current={pathname === href ? "page" : undefined} className="admin-nav-link"><AdminIcon small visual={moduleVisual(key)} /><span>{label}</span></Link>
-  })}</div></div>
- })}</nav>
+ const navigation = <AdminNavigation pathname={pathname} capabilities={capabilities} />
  return <div className="cozy-admin"><WorkspaceShell audience="Administration" context={context} name={name} navigation={navigation} accountAction={<Button variant="ghost" disabled={busy} onClick={logout} aria-label={busy ? "Signing out..." : "Logout"} title="Logout"><LogOut className="size-4" /></Button>}>
   {error && <p role="alert" className="mb-5 rounded-xl border border-destructive/30 bg-card p-4 text-sm text-destructive">{error}</p>}{children}
  </WorkspaceShell></div>

@@ -24,19 +24,20 @@ const backend = createServer(async (request, response) => {
   if (path === 'workspace-preferences') { const patch = body; if (request.method === 'PATCH') preferences = { ...preferences, ...patch }; return send(200, { data: preferences }) }
  if (path === 'auth/logout') return send(200, {})
  if (forbidden && path === 'users') return send(403, {})
+ const reportMeta = url.searchParams.get('view') === 'internal' ? {...meta,view:'internal',as_of:'2026-10-01T12:00:00Z',precision:'Exact internal counts.',window:{from:'2026-09-02',to_exclusive:'2026-10-01T12:00:00Z'}} : meta
  if (path === 'metrics/insights') {
   seenRange = url.searchParams.get('range')
-  return send(200, { meta, data: {
+  return send(200, { meta:reportMeta, data: {
    moods: [{ label: 'Good', ...cell }], triggers: [{ label: 'Work', ...cell }], coping: [{ label: 'Box breathing', ...cell }], anxiety: [{ label: '12:00', ...cell }], helpfulness: [{ label: 'Box breathing|yes', ...cell }],
    devices: [{ label: 'android', ...cell }, { label: 'ios', ...cell }], mood_trends: [{ label: '2026-09-29|Good', ...cell }], enrollments: [], completions: [], subscription_changes: [],
    daily: [{ date: '2026-09-29', signups: cell, active: cell }, { date: '2026-09-30', signups: cell, active: cell }],
    summary: { active_users: cell, new_users: cell, community_posts: cell, average_intensity: { status: 'available', count: 5.2 }, pending_reports: cell }
   } })
  }
- if (path === 'metrics/usage') return send(200, { meta, data: { features: [{ feature: 'mood_entries', ...cell }, { feature: 'quiz_attempts', ...cell }] } })
- if (path === 'metrics/safety') return send(200, { meta, data: [{ range: '7d', status: 'suppressed', count: '<5' }, { range: '30d', status: 'unavailable', count: null }, { range: '90d', status: 'available', count: 0 }] })
+ if (path === 'metrics/usage') return send(200, { meta:reportMeta, data: { features: [{ feature: 'mood_entries', ...cell }, { feature: 'quiz_attempts', ...cell }] } })
+ if (path === 'metrics/safety') return send(200, { meta:reportMeta, data: [{ range: '7d', status: 'suppressed', count: '<5' }, { range: '30d', status: 'unavailable', count: null }, { range: '90d', status: 'available', count: 0 }] })
  if (path === 'community-moderation') return send(200, { data: { data: [], current_page: 1, last_page: 1 }, appeals: { data: [], current_page: 1, last_page: 1 } })
- if (path === 'metrics/retention') return send(200, { meta, data: [] })
+ if (path === 'metrics/retention') return send(200, { meta:reportMeta, data: [] })
  if (path.startsWith('content/coping') && request.method !== 'GET') {
   if (request.method === 'POST') { coping.push({ id: 1, ...body }); return send(201, { data: coping[0] }) }
   if (request.method === 'PUT') { coping[0] = { ...coping[0], ...body }; return send(200, {}) }

@@ -7,7 +7,7 @@ test('a paginated fallback cannot be rendered as a published safety report', () 
   const fallback = { data: { data: [], current_page: 1, last_page: 1, total: 0 } }
   // This reproduces the old Safety render path's undefined meta access.
   assert.throws(() => fallback.meta.release, TypeError)
-  assert.throws(() => assertMetricResponse(fallback, 'safety'), /published report is incomplete/)
+  assert.throws(() => assertMetricResponse(fallback, 'safety'), /analytics response is incomplete/)
 })
 test('unavailable and privacy-suppressed safety values remain valid, distinct from zero', () => {
   assert.doesNotThrow(() => assertMetricResponse({ meta, data: [{ range: '7d', status: 'suppressed', count: '<5' }, { range: '30d', status: 'unavailable', count: null }, { range: '90d', status: 'available', count: 0 }] }, 'safety'))
