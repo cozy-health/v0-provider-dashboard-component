@@ -37,6 +37,7 @@ export function validAdminOrigin(request: Request) {
   return !!expected && request.headers.get("origin") === expected && request.headers.get("x-cozy-request") === "1" && validCsrf(request)
 }
 export function adminRoute(path: string, method: string) {
+  if (path === "workspace-preferences" && ["GET", "PATCH"].includes(method)) return true
   const uuid = "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
   if (method === "GET" && path === "community-moderation") return true
   if (method === "POST" && (path === "community-moderation/bans" || new RegExp(`^community-moderation/(bans/${uuid}/lift|appeals/${uuid}/review)$`).test(path))) return true

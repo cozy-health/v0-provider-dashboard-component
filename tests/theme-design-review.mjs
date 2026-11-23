@@ -53,7 +53,8 @@ export async function reviewThemes(page, name) {
       if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) console.log('OVERFLOW', name, JSON.stringify(overflowing))
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name} overflow at ${width} in ${theme}`)
       const background = await page.locator('body').evaluate(el => getComputedStyle(el).backgroundColor)
-      assert.equal(background, theme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(248, 250, 252)')
+      const accountPalette = await page.locator('html').evaluate(el => Boolean(el.dataset.cozyAccent))
+      assert.equal(background, accountPalette ? (theme === 'dark' ? 'rgb(18, 20, 22)' : 'rgb(245, 246, 248)') : (theme === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(248, 250, 252)'))
 
       results.push({ width, theme, background, overflow: false, touchTarget: bounds.width })
     }
@@ -87,6 +88,7 @@ export async function reviewThemes(page, name) {
   }
   await page.reload()
   await page.getByRole('button', { name: 'Switch to light mode', exact: true }).filter({ visible: true }).waitFor()
+  await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.getAttribute('aria-label') === 'Switch to light mode' && !button.disabled))
   await page.getByRole('button', { name: 'Switch to light mode', exact: true }).filter({ visible: true }).focus()
   await page.keyboard.press('Enter')
   await page.getByRole('button', { name: 'Switch to dark mode', exact: true }).filter({ visible: true }).waitFor()

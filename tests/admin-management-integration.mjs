@@ -10,6 +10,7 @@ import { validateQuizImport } from '../lib/admin-quiz-import.mjs'
 const cell = { status: 'available', count: 15 }
 const meta = { release: '2026-10-01', timezone: 'UTC', precision: 'Counts rounded down to multiples of five.', window: { from: '2026-07-03', to_exclusive: '2026-10-01' } }
 let coping = [], quizzes = [], seenRange = '', forbidden = false
+let preferences = { theme: "system", accent: "blue", layout: "overview", density: "comfortable", sidebar_collapsed: false, tour_state: "new", tour_step: 0, tour_version: 1 }
 const backend = createServer(async (request, response) => {
  response.setHeader('Content-Type', 'application/json')
  const send = (status, value) => { response.writeHead(status); response.end(JSON.stringify(value)) }
@@ -20,6 +21,7 @@ const backend = createServer(async (request, response) => {
  if (request.headers.authorization !== 'Bearer local-management-fixture') return send(401, {})
  if (path === 'operations/summary') return send(200, { data: { checked_at: '2026-10-01T12:00:00Z', totals: {}, attention: [], activity: [] } })
   if (path === 'auth/session') return send(200, { role: 'admin', name: 'Test Operator', capabilities: ['admin:metrics', 'admin:content', 'admin:users', 'admin:email', 'admin:moderation', 'admin:subscriptions'] })
+  if (path === 'workspace-preferences') { const patch = body; if (request.method === 'PATCH') preferences = { ...preferences, ...patch }; return send(200, { data: preferences }) }
  if (path === 'auth/logout') return send(200, {})
  if (forbidden && path === 'users') return send(403, {})
  if (path === 'metrics/insights') {
@@ -96,11 +98,11 @@ try {
  await reviewThemes(page, 'admin-dashboard')
  await page.getByRole('button', { name: 'Switch to dark mode' }).click()
  await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
- assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(0, 0, 0)')
+ assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(18, 20, 22)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
    const css = getComputedStyle(el);
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());
- }), ['#0460d8', '#00bc4c', '#f25c05', '#f2cb05', '#0460d8', '#0460d8', '#00bc4c', '#f25c05', '#f2cb05'])
+ }), ['#0460d8', '#00bc4c', '#f25c05', '#f2cb05', '#71a9ff', '#0460d8', '#00bc4c', '#f25c05', '#f2cb05'])
 
  await mkdir('../docs/validation/admin-phases', { recursive: true })
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-dark.png', fullPage: true })
@@ -108,11 +110,11 @@ try {
  assert.equal(await page.getByRole('button', { name: 'Switch to light mode' }).count(), 1)
  await page.getByRole('button', { name: 'Switch to light mode' }).click()
  await page.waitForFunction(() => !document.documentElement.classList.contains('dark'))
- assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(248, 250, 252)')
+ assert.equal(await page.locator('.cozy-admin').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(245, 246, 248)')
  assert.deepEqual(await page.locator('.cozy-admin').first().evaluate(el => {
    const css = getComputedStyle(el);
    return ['--cozy-blue', '--cozy-green', '--cozy-orange', '--cozy-yellow', '--primary', '--chart-1', '--chart-2', '--chart-3', '--chart-4'].map(key => css.getPropertyValue(key).trim());
- }), ['#0460d8', '#00bc4c', '#f25c05', '#f2cb05', '#0460d8', '#0460d8', '#00bc4c', '#f25c05', '#f2cb05'])
+ }), ['#0460d8', '#00bc4c', '#f25c05', '#f2cb05', '#0866e8', '#0460d8', '#00bc4c', '#f25c05', '#f2cb05'])
  await page.screenshot({ path: '../docs/validation/admin-phases/dashboard-light.png', fullPage: true })
  const rangeResponse = page.waitForResponse(response => {
   const url = new URL(response.url())
