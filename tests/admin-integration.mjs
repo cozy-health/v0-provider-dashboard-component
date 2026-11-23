@@ -10,7 +10,7 @@ const suppressed = { status: 'suppressed', count: '<5' }, available = { status: 
 const cohort = { week: '2026-07-20', signups: available, retention: { d1: { ...available, cohort: 10, rate: 50 }, d7: suppressed, d30: { status: 'immature', count: null, cohort: null, rate: null } } }
 const meta = { release: '2026-10-01', timezone: 'UTC', precision: 'Counts rounded down to multiples of 5.', window: { from: '2026-07-03', to_exclusive: '2026-10-01' }, activity_definition: 'Retained consumer record creation.' }
 const operations = { api: 'ok', database: 'ok', checked_at: '2026-10-09T12:00:00Z', source: 'Current request; no historical window.', ...Object.fromEntries(['availability_history', 'latency_p95', 'latency_p99', 'error_rate', 'queue_health', 'deployment'].map(key => [key, { status: 'unavailable' }])) }
-let availableService = true, revoked = false, empty = false, backendCalls = 0
+let availableService = true, revoked = false, empty = false, backendCalls = 0, protectedFixture = false
 const metricRanges = new Map()
 let preferences = { theme: "system", accent: "blue", layout: "overview", density: "comfortable", sidebar_collapsed: false, tour_state: "new", tour_step: 0, tour_version: 1 }
 const backend = createServer(async (request, response) => {
@@ -34,15 +34,19 @@ const backend = createServer(async (request, response) => {
   if (path === 'auth/session') return send(200, { role: 'admin' })
   if (path === 'workspace-preferences') { let raw = ''; for await (const chunk of request) raw += chunk; const patch = raw ? JSON.parse(raw) : {}; if (request.method === 'PATCH') preferences = { ...preferences, ...patch }; return send(200, { data: preferences }) }
   if (path === 'auth/logout') { revoked = true; return send(200, { message: 'Signed out.' }) }
+  const internal = url.searchParams.get('view') === 'internal' && !protectedFixture
+  const exact = {status:'available',count:2}
+  const scopedMeta = internal ? {...meta,view:'internal',as_of:'2026-10-01T12:00:00Z',precision:'Exact internal counts.',window:{from:'2026-09-02',to_exclusive:'2026-10-01T12:00:00Z'}} : meta
+  const reportCohort = internal ? {...cohort,signups:exact,retention:{d1:{status:'available',count:1,cohort:2,rate:50},d7:{status:'available',count:0,cohort:2,rate:0},d30:cohort.retention.d30}} : cohort
   const metric = path.replace('metrics/', '')
   const range = url.searchParams.get('range')
   metricRanges.set(metric, range)
-  if (metric === 'insights') return send(200, { meta, data: { moods: [], triggers: [], coping: [], anxiety: [], helpfulness: [], mood_trends: [], devices: [], enrollments: [], completions: [], subscription_changes: [], daily: [], summary: { new_users: suppressed, active_users: suppressed, community_posts: suppressed, average_intensity: suppressed, pending_reports: suppressed } } })
-  const data = metric === 'overview' ? { daily_activity: empty ? [] : [{ date: '2026-09-29', ...available }, { date: '2026-09-28', ...suppressed }], signup_trend: empty ? [] : [{ week: cohort.week, ...suppressed }], retention_summary: empty ? [] : [cohort], operations }
-    : metric === 'usage' ? { range: range || '30d', features: empty ? [] : [{ feature: 'mood_entries', ...available }, { feature: 'journal_entries', ...suppressed }], unavailable_features: ['app_opens'] }
-    : metric === 'retention' ? empty ? [] : [cohort]
-    : empty ? [] : [{ range: '7d', ...suppressed }, { range: '30d', ...suppressed }, { range: '90d', ...suppressed }]
-  send(200, { meta, data })
+  if (metric === 'insights') return send(200, { meta:scopedMeta, data: { moods: [], triggers: [], coping: [], anxiety: [], helpfulness: [], mood_trends: [], devices: [], enrollments: [], completions: [], subscription_changes: [], daily: [], summary: { new_users: internal ? exact : suppressed, active_users: internal ? exact : suppressed, community_posts: internal ? {status:'available',count:0} : suppressed, average_intensity: suppressed, pending_reports: suppressed } } })
+  const data = metric === 'overview' ? { daily_activity: empty ? [] : [{ date: '2026-09-29', ...available }, { date: '2026-09-28', ...suppressed }], signup_trend: empty ? [] : [{ week: cohort.week, ...suppressed }], retention_summary: empty ? [] : [reportCohort], operations }
+    : metric === 'usage' ? { range: range || '30d', features: empty ? [] : [{ feature: 'mood_entries', ...available }, { feature: 'journal_entries', ...(internal ? exact : suppressed) }], unavailable_features: ['app_opens'] }
+    : metric === 'retention' ? empty ? [] : [reportCohort]
+    : empty ? [] : [{ range: '7d', ...(internal ? exact : suppressed) }, { range: '30d', ...(internal ? available : suppressed) }, { range: '90d', ...(internal ? {status:'available',count:7} : suppressed) }]
+  send(200, { meta:scopedMeta, data })
 })
 await new Promise(resolve => backend.listen(0, '127.0.0.1', resolve))
 process.env.ADMIN_API_URL = `http://127.0.0.1:${backend.address().port}/api/v1/admin/`
@@ -157,9 +161,17 @@ try {
   assert.equal(await page.getByLabel('Reporting period').inputValue(), '7d')
   await page.goto(`${origin}/admin/retention`)
   await page.getByText('Not mature', { exact: true }).filter({ visible: true }).waitFor()
-  assert.equal(await page.locator('tbody td').filter({ hasText: '<5', visible: true }).count(), 1)
+  await page.getByText('Exact internal counts',{exact:true}).waitFor()
+  assert.equal(await page.locator('tbody td').filter({ hasText: '<5', visible: true }).count(), 0)
+  protectedFixture = true; await page.reload()
+  await page.getByText('Protected published report',{exact:true}).waitFor()
+  assert.equal(await page.locator('tbody td').filter({ hasText: 'Protected', visible:true }).count(), 1)
+  protectedFixture = false
   await page.getByRole('link', { name: 'View aggregate safety reporting', exact: true }).click()
+  await page.getByText('Exact internal counts',{exact:true}).waitFor()
+  protectedFixture = true; await page.reload()
   await page.getByText('This view has no publishable counts yet.', { exact: false }).waitFor()
+  protectedFixture = false
   await page.setViewportSize({ width: 390, height: 844 }); await page.screenshot({ path: '../docs/PD7_ADMIN_MOBILE.png', fullPage: true })
   empty = true; await page.reload(); await page.getByText('No reporting buckets are available for this release.').waitFor()
   empty = false; availableService = false

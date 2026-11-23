@@ -87,7 +87,7 @@ test('rendered suppression and immature cells never disclose hidden counts or ra
   const compiled = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS } }).outputText
   const loaded = { exports: {} }; new Function('require', 'module', 'exports', compiled)(require, loaded, loaded.exports)
   const hidden = renderToStaticMarkup(React.createElement(loaded.exports.RetentionCell, { cell: { status: 'suppressed', count: 123, cohort: 987, rate: 42 } }))
-  assert.match(hidden, /&lt;5/); for (const value of ['123', '987', '42%']) assert.ok(!hidden.includes(value))
+  assert.match(hidden, /Protected/); assert.match(hidden, /does not mean zero/); for (const value of ['123', '987', '42%']) assert.ok(!hidden.includes(value))
   const immature = renderToStaticMarkup(React.createElement(loaded.exports.RetentionCell, { cell: { status: 'immature', count: null, cohort: null, rate: null } }))
   assert.match(immature, /Not mature/)
 })

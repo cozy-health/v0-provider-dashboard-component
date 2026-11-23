@@ -2,7 +2,7 @@ import { mutationHeaders } from "./csrf"
 import { assertMetricResponse } from "./admin-metric-response"
 export type Cell = { status: "available" | "suppressed" | "immature" | "unavailable"; count: number | "<5" | null; cohort?: number | "<5" | null; rate?: number | null }
 export type Cohort = { week: string; signups: Cell; retention: { d1: Cell; d7: Cell; d30: Cell } }
-export type Meta = { release: string; timezone: string; precision: string; activity_definition: string; window: { from: string; to_exclusive: string } }
+export type Meta = { view?: "internal" | "published"; as_of?: string; release: string; timezone: string; precision: string; activity_definition: string; window: { from: string; to_exclusive: string } }
 export type Comparison = { status: "available" | "unavailable"; previous_release: string | null; current_window: { from: string; to_exclusive: string }; previous_window: { from: string; to_exclusive: string } | null; metrics: Record<string, { status: "available" | "unavailable"; previous_count: number | null; change_percent: number | null }> }
 export type MetricResponse<T> = { meta: Meta; data: T; comparison?: Comparison }
 export class AdminApiError extends Error {

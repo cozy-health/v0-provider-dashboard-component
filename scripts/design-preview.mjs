@@ -32,10 +32,12 @@ for (const [original, target] of [['provider-integration.mjs', 'design-provider-
   }
   if (original.startsWith('admin-management')) fixture = fixture.replace("'admin:subscriptions']", "'admin:subscriptions', 'admin:support', 'admin:privacy']")
   if (original === 'admin-integration.mjs') {
-    const daily = Array.from({ length: 30 }, (_, index) => ({ date: `2026-09-${String(index + 1).padStart(2, '0')}`, signups: { status: 'available', count: 5 + index % 7 * 5 }, active: { status: 'available', count: 40 + index % 9 * 5 } }))
+    const daily = Array.from({ length: 30 }, (_, index) => ({ date: new Date(Date.UTC(2026, 8, index + 2)).toISOString().slice(0,10), signups: { status: 'available', count: 5 + index % 7 * 5 }, active: { status: 'available', count: 40 + index % 9 * 5 } }))
     const newUsers = daily.reduce((sum, day) => sum + day.signups.count, 0)
-    fixture = fixture.replace('daily: []', 'daily: ' + JSON.stringify(daily))
-      .replace('new_users: suppressed', 'new_users: ' + JSON.stringify({status:'available',count:newUsers}))
+    fixture = fixture.replace('totals: {}', 'totals: {consumer_accounts:720,pending_reports:2,open_support:3,active_subscriptions:45}')
+      .replace('active_users: internal ? exact : suppressed', 'active_users: {status: "available", count:120}')
+      .replace('daily: []', 'daily: ' + JSON.stringify(daily))
+      .replace('new_users: internal ? exact : suppressed', 'new_users: ' + JSON.stringify({status:'available',count:newUsers}))
       .replace('active_users: suppressed', 'active_users: ' + JSON.stringify({status:'available',count:180}))
       .replace('community_posts: suppressed', 'community_posts: ' + JSON.stringify({status:'available',count:75}))
       .replace("from: '2026-07-03'", "from: '2026-09-01'")
